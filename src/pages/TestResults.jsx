@@ -6,7 +6,7 @@ import {
     Dialog, DialogTitle, DialogContent, DialogActions, TextField,
 } from '@mui/material';
 import { ArrowBack, CheckCircle, Edit, Save, Download } from '@mui/icons-material';
-import { supabase } from '../lib/supabase';
+import api from '../lib/api';
 
 export default function TestResults() {
     const { testId } = useParams();
@@ -24,18 +24,13 @@ export default function TestResults() {
 
     const loadResults = async () => {
         try {
-            // Get test details
-            const { data: testData } = await supabase.from('tests').select('*').eq('id', testId).single();
-            setTest(testData);
-
-            // Get all sessions (results)
-            const { data: sessionData } = await supabase
-                .from('exam_sessions')
-                .select('*, users:student_id(username, email)')
-                .eq('test_id', testId)
-                .order('score', { ascending: false });
-
-            setResults(sessionData || []);
+            const data = await api.get(`/api/sessions/by-test/${testId}`);
+            setTest(data.test);
+            // Attach student username/email from join
+            setResults(data.sessions.map(s => ({
+                ...s,
+                users: s.student || null,
+            })));
         } catch (err) { console.error(err); }
         setLoading(false);
     };
@@ -49,10 +44,9 @@ export default function TestResults() {
 
     const handleSave = async () => {
         try {
-            await supabase.from('exam_sessions').update({
+            await api.patch(`/api/sessions/${selectedResult.id}`, {
                 score: parseFloat(tempScore),
-                // feedback: feedback, // Assuming we add a feedback column or store in json
-            }).eq('id', selectedResult.id);
+            });
             setEditOpen(false);
             loadResults();
         } catch (err) { console.error(err); }
@@ -62,29 +56,14 @@ export default function TestResults() {
         if (!test) return;
         setExporting(true);
         try {
-            // 1. Fetch all questions for columns via junction table
-            const { data: qData } = await supabase.from('test_questions')
-                .select('questions(*)')
-                .eq('test_id', testId).order('question_order', { ascending: true });
-            const safeQuestions = qData?.map(q => q.questions).filter(Boolean) || [];
-
-            // 2. Fetch all enrolled students for this test's course
-            const { data: enrollments } = await supabase.from('enrollments')
-                .select('users!enrollments_student_id_fkey(id, full_name, username)')
-                .eq('course_id', test.course_id);
-            const enrolledStudents = enrollments?.map(e => e.users) || [];
-
-            // 3. Fetch all exam sessions for this test
-            const { data: sessions } = await supabase.from('exam_sessions')
-                .select('*').eq('test_id', testId);
-
-            // 4. Fetch all answers for these sessions
-            const sessionIds = sessions?.map(s => s.id) || [];
-            let answers = [];
-            if (sessionIds.length > 0) {
-                const { data: ansData } = await supabase.from('answers').select('*').in('session_id', sessionIds);
-                answers = ansData || [];
-            }
+            const byTest = await api.get(`/api/sessions/by-test/${testId}`);
+            const safeQuestions = (byTest.questions || []).map(q => ({
+                id: q.question_id, ...q,
+            }));
+            const enrolledStudents = (byTest.enrollments || []).map(e => e.student || { id: e.student_id, full_name: '', username: e.student_id });
+            const sessions = byTest.sessions || [];
+            const answers = sessions.flatMap(s => (s.answers || []).map(a => ({ ...a, session_id: s.id })));
+            const testObj = byTest.test;
 
             // CSV Building
             let csvContent = "";
@@ -141,7 +120,7 @@ export default function TestResults() {
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.setAttribute("href", url);
-            link.setAttribute("download", `Test_Results_${test.title.replace(/[^a-z0-9]/gi, '_')}.csv`);
+            link.setAttribute("download", `Test_Results_${testObj.title.replace(/[^a-z0-9]/gi, '_')}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);

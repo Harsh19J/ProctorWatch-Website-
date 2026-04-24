@@ -7,7 +7,7 @@ import {
 import {
     AdminPanelSettings, Warning, Key, Fingerprint, LockOpen,
 } from '@mui/icons-material';
-import { supabase } from '../lib/supabase';
+import api from '../lib/api';
 import useAuthStore from '../store/authStore';
 
 // ─── Helper: parse purpose returned by override code ────────────────────────
@@ -77,41 +77,16 @@ export default function AdminOverridePanel({ open, onClose, sessionId, studentId
     /** Path B — Single-Use Override Code */
     const handleCodeAuth = async () => {
         const trimmed = overrideCode.trim().toUpperCase();
-        if (trimmed.length !== 6) {
-            setError('Please enter a valid 6-character override code');
-            return;
-        }
-        setLoading(true);
-        setError('');
+        if (trimmed.length !== 6) { setError('Please enter a valid 6-character override code'); return; }
+        setLoading(true); setError('');
         try {
-            // Look up the code — must be unused and not expired
-            const { data: codeRow, error: fetchErr } = await supabase
-                .from('override_codes')
-                .select('*')
-                .eq('code', trimmed)
-                .eq('used', false)
-                .gt('expires_at', new Date().toISOString())
-                .single();
-
-            if (fetchErr || !codeRow) {
-                setError('Invalid, already used, or expired override code');
-                setLoading(false);
-                return;
-            }
-
-            // Mark as used immediately so it cannot be replayed
-            await supabase.from('override_codes').update({
-                used: true,
-                used_at: new Date().toISOString(),
-                used_by: user?.id ?? null,
-            }).eq('id', codeRow.id);
-
-            setResolvedPurpose(codeRow.purpose);
-            setResolvedCodeId(codeRow.id);
-            setResolvedAdminId(codeRow.created_by);
+            const result = await api.post('/api/override-codes/verify', { code: trimmed });
+            if (!result?.ok) { setError('Invalid, already used, or expired override code'); setLoading(false); return; }
+            setResolvedPurpose(result.purpose || 'module_override');
+            setResolvedCodeId(trimmed);
             setStep('config');
         } catch (err) {
-            setError(err.message);
+            setError(err.message || 'Invalid, already used, or expired override code');
         }
         setLoading(false);
     };
@@ -142,58 +117,19 @@ export default function AdminOverridePanel({ open, onClose, sessionId, studentId
 
     const applyModuleOverride = async () => {
         const disabledModules = Object.keys(modules).filter(k => !modules[k]);
-
-        // Resolve admin ID (credentials path looks up by username)
-        let adminId = resolvedAdminId;
-        if (!adminId && username) {
-            const { data: adminUser } = await supabase
-                .from('users').select('id').eq('username', username).single();
-            adminId = adminUser?.id;
-        }
-
-        await supabase.from('module_overrides').insert({
+        await api.post('/api/sessions/override', {
             session_id: sessionId,
-            admin_id: adminId,
             disabled_modules: disabledModules,
             reason: reason.trim(),
+            via: resolvedCodeId ? 'override_code' : 'admin_credentials',
         });
-
-        await supabase.from('audit_logs').insert({
-            action: 'ADMIN_OVERRIDE_APPLIED',
-            user_id: adminId ?? user?.id,
-            target_type: 'exam_session',
-            target_id: sessionId,
-            details: {
-                disabled_modules: disabledModules,
-                reason: reason.trim(),
-                via: resolvedCodeId ? 'override_code' : 'admin_credentials',
-            },
-        });
-
         onClose(disabledModules);
     };
 
     const applyFaceReset = async () => {
         const targetStudentId = studentId ?? user?.id;
-
-        // Delete face registration for the student
-        await supabase.from('face_registrations')
-            .delete()
-            .eq('user_id', targetStudentId);
-
-        await supabase.from('audit_logs').insert({
-            action: 'FACE_ID_RESET',
-            user_id: resolvedAdminId ?? user?.id,
-            target_type: 'user',
-            target_id: targetStudentId,
-            details: {
-                reason: reason.trim(),
-                via: resolvedCodeId ? 'override_code' : 'admin_credentials',
-                session_id: sessionId,
-            },
-        });
-
-        onClose([]); // No modules to disable
+        await api.del(`/api/users/${targetStudentId}/face`);
+        onClose([]);
     };
 
     // ────────────────────────────────────────────────────────────────────────────

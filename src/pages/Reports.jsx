@@ -8,7 +8,7 @@ import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
     ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend,
 } from 'recharts';
-import { supabase } from '../lib/supabase';
+import api from '../lib/api';
 import useAuthStore from '../store/authStore';
 
 const COLORS = ['#6C63FF', '#4ECDC4', '#FF4D6A', '#FFB74D', '#00D9FF', '#A78BFA'];
@@ -32,53 +32,26 @@ export default function Reports() {
     const loadReports = async () => {
         setLoading(true);
         try {
-            const isTeacher = user?.role === 'teacher';
-
-            // Courses
-            let crsQuery = supabase.from('courses').select('id, name, code').eq('is_active', true);
-            if (isTeacher) crsQuery = crsQuery.eq('teacher_id', user.id);
-            const { data: crs } = await crsQuery;
+            const [crs, allTests, rawSessions, rawFlags] = await Promise.all([
+                api.get('/api/courses'),
+                api.get('/api/tests'),
+                api.get('/api/sessions'),
+                api.get('/api/flags'),
+            ]);
             setCourses(crs || []);
+            setTests(allTests || []);
 
-            // Tests
-            let testQuery = supabase.from('tests').select('id, title, course_id');
-            if (isTeacher && crs?.length > 0) {
-                testQuery = testQuery.in('course_id', crs.map(c => c.id));
-            } else if (isTeacher && (!crs || crs.length === 0)) {
-                setTests([]);
-                setScoreDistribution([]);
-                setFlagBreakdown([]);
-                setCourseStats([]);
-                setTrendData([]);
-                setLoading(false);
-                return;
-            }
-            const { data: tData } = await testQuery;
-            setTests(tData || []);
-
-            // All completed sessions
-            let sessQuery = supabase
-                .from('exam_sessions')
-                .select('*, tests!inner(title, total_marks, course_id, courses(name))')
-                .in('status', ['submitted', 'completed']);
-
-            if (isTeacher) {
-                sessQuery = sessQuery.in('tests.course_id', crs.map(c => c.id));
-            }
-
-            if (testFilter !== 'all') {
-                sessQuery = sessQuery.eq('test_id', testFilter);
-            } else if (courseFilter !== 'all') {
-                sessQuery = sessQuery.eq('tests.course_id', courseFilter);
-            }
-
-            const { data: sessions } = await sessQuery;
-            const allSessions = sessions || [];
+            // Filter sessions client-side by active filters
+            let allSessions = (rawSessions || []).filter(s =>
+                s.status === 'completed' || s.status === 'submitted'
+            );
+            if (testFilter !== 'all') allSessions = allSessions.filter(s => s.test_id === testFilter);
+            else if (courseFilter !== 'all') allSessions = allSessions.filter(s => s.test?.course_id === courseFilter);
 
             // 1. Score Distribution
             const buckets = { '0-20': 0, '21-40': 0, '41-60': 0, '61-80': 0, '81-100': 0 };
             allSessions.forEach(s => {
-                const pct = Math.round(((s.score || 0) / (s.tests?.total_marks || 1)) * 100);
+                const pct = Math.round(((s.score || 0) / (s.test?.total_marks || s.tests?.total_marks || 1)) * 100);
                 if (pct <= 20) buckets['0-20']++;
                 else if (pct <= 40) buckets['21-40']++;
                 else if (pct <= 60) buckets['41-60']++;
@@ -88,47 +61,42 @@ export default function Reports() {
             setScoreDistribution(Object.entries(buckets).map(([range, count]) => ({ range, count })));
 
             // 2. Flag Breakdown
-            let flags = [];
-            if (allSessions.length > 0) {
-                const sessionIds = allSessions.map(s => s.id);
-                const { data: fData } = await supabase.from('flags').select('severity, module').in('session_id', sessionIds);
-                flags = fData || [];
-            }
-
+            const sessionIds = new Set(allSessions.map(s => s.id));
+            const flags = (rawFlags || []).filter(f => sessionIds.has(f.session_id));
             const moduleMap = {};
             flags.forEach(f => {
                 const mod = f.module || 'Unknown';
                 if (!moduleMap[mod]) moduleMap[mod] = { red: 0, orange: 0 };
-                if (f.severity === 'RED') moduleMap[mod].red++;
+                if (f.severity === 'RED' || f.severity === 'high') moduleMap[mod].red++;
                 else moduleMap[mod].orange++;
             });
             setFlagBreakdown(Object.entries(moduleMap).map(([name, v]) => ({ name, ...v, total: v.red + v.orange })));
 
             // 3. Course-wise Stats
             const courseMap = {};
+            const testMap = Object.fromEntries((allTests || []).map(t => [t.id, t]));
             allSessions.forEach(s => {
-                const name = s.tests?.courses?.name || 'Unknown';
+                const t = testMap[s.test_id];
+                const name = t?.courseName || t?.courses?.name || 'Unknown';
                 if (!courseMap[name]) courseMap[name] = { exams: 0, totalPct: 0, flags: 0 };
                 courseMap[name].exams++;
-                courseMap[name].totalPct += ((s.score || 0) / (s.tests?.total_marks || 1)) * 100;
+                courseMap[name].totalPct += ((s.score || 0) / (t?.total_marks || 1)) * 100;
                 courseMap[name].flags += (s.red_flags || 0) + (s.orange_flags || 0);
             });
             setCourseStats(Object.entries(courseMap).map(([name, v]) => ({
                 name: name.length > 15 ? name.slice(0, 15) + '…' : name,
                 avgScore: Math.round(v.totalPct / v.exams),
-                exams: v.exams,
-                flags: v.flags,
+                exams: v.exams, flags: v.flags,
             })));
 
-            // 4. Trend over time (last 30 days)
-            const now = new Date();
-            const thirtyDaysAgo = new Date(now - 30 * 86400000);
+            // 4. Trend over last 30 days
+            const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);
             const byDate = {};
             allSessions.filter(s => new Date(s.ended_at) >= thirtyDaysAgo).forEach(s => {
                 const day = new Date(s.ended_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                 if (!byDate[day]) byDate[day] = { exams: 0, totalPct: 0 };
                 byDate[day].exams++;
-                byDate[day].totalPct += ((s.score || 0) / (s.tests?.total_marks || 1)) * 100;
+                byDate[day].totalPct += ((s.score || 0) / (testMap[s.test_id]?.total_marks || 1)) * 100;
             });
             setTrendData(Object.entries(byDate).map(([day, v]) => ({
                 day, exams: v.exams, avgScore: Math.round(v.totalPct / v.exams),

@@ -8,7 +8,7 @@ import {
     TrendingUp, TrendingDown, EmojiEvents, Assignment,
     CheckCircle, Cancel, Schedule,
 } from '@mui/icons-material';
-import { supabase } from '../lib/supabase';
+import api from '../lib/api';
 import useAuthStore from '../store/authStore';
 
 import { useNavigate } from 'react-router-dom';
@@ -34,109 +34,47 @@ export default function StudentPerformance() {
     }, [user]);
 
     const loadStudents = async () => {
-        const { data } = await supabase.from('users').select('id, username, full_name, email')
-            .eq('role', 'student').order('username');
-        setStudents(data || []);
-        if (data?.length > 0) {
-            setSelectedStudent(data[0].id);
-            loadPerformance(data[0].id);
-        } else {
-            setLoading(false);
-        }
+        const data = await api.get('/api/users');
+        const students = (data || []).filter(u => u.role === 'student').sort((a, b) => (a.username || '').localeCompare(b.username || ''));
+        setStudents(students);
+        if (students.length > 0) { setSelectedStudent(students[0].id); loadPerformance(students[0].id); }
+        else setLoading(false);
     };
 
     const loadChildren = async () => {
-        // Step 1: get the student IDs linked to this parent
-        const { data: links, error: linkErr } = await supabase
-            .from('parent_student')
-            .select('student_id')
-            .eq('parent_id', user.id);
-
-        if (linkErr) {
-            console.error('[ParentPerformance] parent_student query failed:', linkErr);
-            setLoading(false);
-            return;
-        }
-
-        const studentIds = (links || []).map(l => l.student_id);
-        console.log('[ParentPerformance] Children IDs:', studentIds);
-
-        if (studentIds.length === 0) {
-            console.warn('[ParentPerformance] No children linked to this parent.');
-            setLoading(false);
-            return;
-        }
-
-        // Step 2: fetch the user records for those student IDs
-        const { data: kids, error: kidsErr } = await supabase
-            .from('users')
-            .select('id, username, full_name, email')
-            .in('id', studentIds);
-
-        if (kidsErr) {
-            console.error('[ParentPerformance] users query failed:', kidsErr);
-            setLoading(false);
-            return;
-        }
-
-        console.log('[ParentPerformance] Children found:', kids);
-        setStudents(kids || []);
-        if (kids && kids.length > 0) {
-            setSelectedStudent(kids[0].id);
-            loadPerformance(kids[0].id);
-        } else {
-            setLoading(false);
-        }
+        try {
+            const allUsers = await api.get('/api/users');
+            // The parent's children are stored in parent.children array in MongoDB
+            const meData = await api.get('/api/users/me');
+            const childrenIds = meData?.children || [];
+            const kids = (allUsers || []).filter(u => childrenIds.includes(u.id));
+            setStudents(kids);
+            if (kids.length > 0) { setSelectedStudent(kids[0].id); loadPerformance(kids[0].id); }
+            else setLoading(false);
+        } catch (err) { console.error('[ParentPerformance]', err); setLoading(false); }
     };
 
     const loadPerformance = async (studentId) => {
         setLoading(true);
         try {
-            const { data, error } = await supabase
-                .from('exam_sessions')
-                .select('*, tests(title, total_marks, duration_minutes, courses(name))')
-                .eq('student_id', studentId)
-                // Include all non-active statuses so terminated/invalidated sessions are visible
-                .in('status', ['submitted', 'completed', 'terminated', 'invalidated'])
-                .order('ended_at', { ascending: false });
-
-            if (error) {
-                console.error('[ParentPerformance] exam_sessions query failed:', error);
-                setLoading(false);
-                return;
-            }
-
-            const sessionList = data || [];
-
-            // Fetch actual flag counts from the flags table (counter columns may be stale)
-            if (sessionList.length > 0) {
-                const sessionIds = sessionList.map(s => s.id);
-                const { data: flagRows } = await supabase
-                    .from('flags')
-                    .select('session_id, severity')
-                    .in('session_id', sessionIds);
-
-                // Build a map of { sessionId: { red, orange } }
-                const flagMap = {};
-                (flagRows || []).forEach(f => {
-                    if (!flagMap[f.session_id]) flagMap[f.session_id] = { red: 0, orange: 0 };
-                    if (f.severity === 'RED') flagMap[f.session_id].red++;
-                    else if (f.severity === 'ORANGE') flagMap[f.session_id].orange++;
-                });
-
-                // Merge live flag counts into sessions
-                const enriched = sessionList.map(s => ({
-                    ...s,
-                    red_flags: flagMap[s.id]?.red ?? s.red_flags ?? 0,
-                    orange_flags: flagMap[s.id]?.orange ?? s.orange_flags ?? 0,
-                }));
-                setSessions(enriched);
-            } else {
-                setSessions([]);
-            }
-        } catch (err) {
-            console.error('[Performance] Unexpected error:', err);
-        }
+            const data = await api.get(`/api/sessions?student_id=${studentId}`);
+            const sessionList = (data || []).filter(s =>
+                ['submitted', 'completed', 'terminated', 'invalidated'].includes(s.status)
+            );
+            // Attach flags
+            const allFlags = await api.get('/api/flags');
+            const flagsBySession = {};
+            (allFlags || []).forEach(f => {
+                if (!flagsBySession[f.session_id]) flagsBySession[f.session_id] = { red: 0, orange: 0 };
+                if (f.severity === 'RED' || f.severity === 'high') flagsBySession[f.session_id].red++;
+                else flagsBySession[f.session_id].orange++;
+            });
+            setSessions(sessionList.map(s => ({
+                ...s,
+                red_flags: flagsBySession[s.id]?.red ?? s.red_flags ?? 0,
+                orange_flags: flagsBySession[s.id]?.orange ?? s.orange_flags ?? 0,
+            })));
+        } catch (err) { console.error('[Performance]', err); }
         setLoading(false);
     };
 

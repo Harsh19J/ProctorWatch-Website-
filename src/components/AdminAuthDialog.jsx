@@ -4,7 +4,7 @@ import {
     TextField, Typography, Alert, CircularProgress, Box, Tabs, Tab,
 } from '@mui/material';
 import { AdminPanelSettings, Lock, Key } from '@mui/icons-material';
-import { supabase } from '../lib/supabase';
+import api from '../lib/api';
 import useAuthStore from '../store/authStore';
 
 /**
@@ -66,48 +66,14 @@ export default function AdminAuthDialog({
         setLoading(true);
         setError('');
         try {
-            // Look up the code — must be unused, not expired, and for face_reset purpose
-            const { data: codeRow, error: fetchErr } = await supabase
-                .from('override_codes')
-                .select('*')
-                .eq('code', trimmed)
-                .eq('used', false)
-                .gt('expires_at', new Date().toISOString())
-                .single();
-
-            if (fetchErr || !codeRow) {
+            const codeRow = await api.post('/api/override-codes/verify', {
+                code: trimmed, purpose: 'face_reset',
+            });
+            if (!codeRow) {
                 setError('Invalid, already used, or expired override code');
                 setLoading(false);
                 return;
             }
-
-            // Validate purpose matches — only face_reset codes are accepted here
-            if (codeRow.purpose !== 'face_reset') {
-                setError('This code is for module override, not Face ID reset. Please use the correct code.');
-                setLoading(false);
-                return;
-            }
-
-            // Mark as used immediately to prevent replay
-            await supabase.from('override_codes').update({
-                used: true,
-                used_at: new Date().toISOString(),
-                used_by: user?.id ?? null,
-            }).eq('id', codeRow.id);
-
-            // Log to audit
-            await supabase.from('audit_logs').insert({
-                action: 'FACE_ID_RESET_CODE_VERIFIED',
-                user_id: user?.id,
-                target_type: 'user',
-                target_id: user?.id,
-                details: {
-                    override_code_id: codeRow.id,
-                    created_by: codeRow.created_by,
-                    via: 'override_code',
-                },
-            });
-
             onSuccess();
             handleClose();
         } catch (err) {

@@ -7,7 +7,7 @@ import {
 import {
     Key, ContentCopy, Refresh, CheckCircle, Timer, Lock,
 } from '@mui/icons-material';
-import { supabase } from '../lib/supabase';
+import api from '../lib/api';
 import useAuthStore from '../store/authStore';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -63,16 +63,7 @@ export default function OverrideCodeGenerator({ open, onClose }) {
         try {
             const code = generateCode();
             const expiresAt = new Date(Date.now() + CODE_TTL_SECONDS * 1000).toISOString();
-
-            const { error: dbErr } = await supabase.from('override_codes').insert({
-                code,
-                purpose,
-                created_by: user.id,
-                expires_at: expiresAt,
-            });
-
-            if (dbErr) throw dbErr;
-
+            await api.post('/api/override-codes', { code, purpose, expires_at: expiresAt });
             setGeneratedCode({ code, expiresAt });
         } catch (err) {
             setError(err.message || 'Failed to generate code');

@@ -1,47 +1,79 @@
 import { Box, Button, Typography, Chip } from '@mui/material';
-import { Download, OpenInNew } from '@mui/icons-material';
+import { Download, Computer } from '@mui/icons-material';
+import { useState } from 'react';
 
 /**
- * DownloadBanner — shown wherever desktop-only features are referenced.
- * Props:
- *   feature: string — name of the feature (e.g. "Exam Taking")
- *   compact: bool — smaller variant for inline use
+ * DownloadBanner
+ * Shown on dashboards to remind users the actual exam requires the Windows app.
+ *
+ * @param {string}  feature   – The action that requires the desktop app e.g. "Exam Taking"
+ * @param {boolean} compact   – If true, renders as a small button/chip
  */
-export default function DownloadBanner({ feature = 'This feature', compact = false }) {
+export default function DownloadBanner({ feature = 'This Feature', compact = false }) {
+    const [dismissed, setDismissed] = useState(false);
+
+    if (dismissed) return null;
+
     if (compact) {
         return (
             <Chip
-                label={`${feature} requires the desktop app`}
-                icon={<Download sx={{ fontSize: '14px !important' }} />}
+                icon={<Computer sx={{ fontSize: 14 }} />}
+                label="Desktop App Required"
                 size="small"
-                sx={{ bgcolor: 'rgba(108,99,255,0.1)', color: '#8B85FF', border: '1px solid rgba(108,99,255,0.25)', fontWeight: 500 }}
+                sx={{
+                    bgcolor: 'rgba(249,115,22,0.1)',
+                    color: '#F97316',
+                    fontWeight: 600,
+                    border: '1px solid rgba(249,115,22,0.28)',
+                    fontSize: '0.7rem',
+                    cursor: 'default',
+                }}
             />
         );
     }
 
     return (
         <Box sx={{
-            p: 3, borderRadius: 2,
-            background: 'linear-gradient(135deg, rgba(108,99,255,0.08) 0%, rgba(0,217,255,0.05) 100%)',
-            border: '1px solid rgba(108,99,255,0.25)',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            flexWrap: 'wrap', gap: 2,
+            gap: 2, flexWrap: 'wrap',
+            p: 2, mb: 3.5, borderRadius: 2,
+            background: 'linear-gradient(135deg, rgba(249,115,22,0.08), rgba(249,115,22,0.04))',
+            border: '1px solid rgba(249,115,22,0.22)',
+            animation: 'fadeSlideDown 0.4s ease both',
         }}>
-            <Box>
-                <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#8B85FF', mb: 0.5 }}>
-                    🖥️ Desktop App Required
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                    <strong>{feature}</strong> requires the ProctorWatch Windows application for hardware-level enforcement.
-                </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Box sx={{ p: 0.75, borderRadius: '8px', bgcolor: 'rgba(249,115,22,0.12)', color: '#F97316', display: 'flex' }}>
+                    <Computer sx={{ fontSize: 18 }} />
+                </Box>
+                <Box>
+                    <Typography variant="body2" fontWeight={700} sx={{ color: '#F97316', lineHeight: 1.2 }}>
+                        Desktop App Required for {feature}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                        The ProctorWatch Windows app handles live exam sessions. Coming soon.
+                    </Typography>
+                </Box>
             </Box>
-            <Button
-                variant="outlined" size="small" startIcon={<Download />} endIcon={<OpenInNew fontSize="small" />}
-                href="#download"
-                sx={{ borderColor: '#6C63FF', color: '#6C63FF', whiteSpace: 'nowrap', flexShrink: 0, '&:hover': { bgcolor: 'rgba(108,99,255,0.08)' } }}
-            >
-                Download App
-            </Button>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                <Button
+                    size="small" startIcon={<Download sx={{ fontSize: 14 }} />}
+                    href="#download"
+                    sx={{
+                        borderRadius: '8px', fontWeight: 700, fontSize: '0.78rem',
+                        bgcolor: 'rgba(249,115,22,0.12)', color: '#F97316',
+                        border: '1px solid rgba(249,115,22,0.3)',
+                        '&:hover': { bgcolor: 'rgba(249,115,22,0.2)' },
+                    }}
+                >
+                    Learn More
+                </Button>
+                <Button
+                    size="small" onClick={() => setDismissed(true)}
+                    sx={{ color: 'text.disabled', fontSize: '0.72rem', minWidth: 0, p: '4px 8px' }}
+                >
+                    Dismiss
+                </Button>
+            </Box>
         </Box>
     );
 }

@@ -11,7 +11,7 @@ import {
     ArrowBack, CheckCircle, Cancel, Help, Flag, Warning,
     Videocam, PlayArrow, Info, AutoAwesome
 } from '@mui/icons-material';
-import { supabase } from '../lib/supabase';
+import api from '../lib/api';
 import useAuthStore from '../store/authStore';
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
@@ -43,44 +43,17 @@ export default function StudentTestResult() {
 
     const loadResult = async () => {
         try {
-            // Get session details
-            const { data: sessionData } = await supabase
-                .from('exam_sessions')
-                .select('*, tests(*)')
-                .eq('id', sessionId)
-                .single();
-
-            setSession(sessionData);
-
-            if (sessionData) {
-                // Get questions via junction table
-                const { data: qData } = await supabase
-                    .from('test_questions')
-                    .select('questions(*)')
-                    .eq('test_id', sessionData.test_id)
-                    .order('question_order');
-
-                const flatQuestions = qData?.map(q => q.questions) || [];
-                setQuestions(flatQuestions);
-
-                // Get answers
-                const { data: aData } = await supabase
-                    .from('answers')
-                    .select('*')
-                    .eq('session_id', sessionId);
-
+            const data = await api.get(`/api/sessions/${sessionId}`);
+            setSession({ ...data, tests: data.test });
+            if (data) {
+                // Questions for this test
+                const qs = await api.get(`/api/tests/${data.test_id}/questions`);
+                setQuestions(qs || []);
+                // Build answers map
                 const ansMap = {};
-                aData?.forEach(a => ansMap[a.question_id] = a);
+                (data.answers || []).forEach(a => { ansMap[a.question_id] = a; });
                 setAnswers(ansMap);
-
-                // Get flags
-                const { data: flagData } = await supabase
-                    .from('flags')
-                    .select('*')
-                    .eq('session_id', sessionId)
-                    .order('timestamp', { ascending: false });
-
-                setFlags(flagData || []);
+                setFlags(data.flags || []);
             }
         } catch (err) { console.error(err); }
         setLoading(false);
@@ -88,39 +61,16 @@ export default function StudentTestResult() {
 
     const handleReview = async () => {
         if (!selectedFlag) return;
-
-        // Update flag status
-        await supabase.from('flags').update({
-            reviewed: true,
-            review_action: reviewAction,
-            review_notes: reviewNotes,
-        }).eq('id', selectedFlag.id);
-
-        // Handle Exam Invalidation
+        await api.patch(`/api/flags/${selectedFlag.id}`, {
+            reviewed: true, review_action: reviewAction, review_notes: reviewNotes,
+        });
         if (reviewAction === 'invalidate' && isAdmin) {
-            await supabase.from('exam_sessions').update({
-                status: 'invalidated',
-                score: 0,
-                ended_at: new Date().toISOString()
-            }).eq('id', selectedFlag.session_id);
-
-            // Create audit log
-            await supabase.from('audit_logs').insert({
-                action: 'EXAM_INVALIDATED',
-                user_id: user.id,
-                details: {
-                    session_id: selectedFlag.session_id,
-                    reason: reviewNotes,
-                    flag_id: selectedFlag.id
-                }
+            await api.patch(`/api/sessions/${selectedFlag.session_id}`, {
+                status: 'invalidated', score: 0, ended_at: new Date().toISOString(),
             });
         }
-
-        setReviewOpen(false);
-        setSelectedFlag(null);
-        setReviewAction('');
-        setReviewNotes('');
-        loadResult(); // Reload to get updated flags
+        setReviewOpen(false); setSelectedFlag(null); setReviewAction(''); setReviewNotes('');
+        loadResult();
     };
 
     if (loading) return <LinearProgress />;

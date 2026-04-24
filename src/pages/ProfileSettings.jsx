@@ -4,7 +4,7 @@ import {
     Grid, Alert, Divider, CircularProgress, Chip,
 } from '@mui/material';
 import { CameraAlt, Save, Lock } from '@mui/icons-material';
-import { supabase } from '../lib/supabase';
+import api from '../lib/api';
 import useAuthStore from '../store/authStore';
 
 export default function ProfileSettings() {
@@ -27,26 +27,14 @@ export default function ProfileSettings() {
     useEffect(() => {
         const fetchProfile = async () => {
             try {
-                const { data, error } = await supabase
-                    .from('users')
-                    .select('full_name')
-                    .eq('id', user.id)
-                    .single();
-
-                if (data && data.full_name) {
+                const data = await api.get('/api/users/me');
+                if (data?.full_name) {
                     setFullName(data.full_name);
-                    // Also silently patch the auth store so the rest of the UI (TopBar) catches up
                     useAuthStore.setState({ user: { ...user, full_name: data.full_name } });
-
                     const stored = JSON.parse(localStorage.getItem('pw_session'));
-                    if (stored) {
-                        stored.user.full_name = data.full_name;
-                        localStorage.setItem('pw_session', JSON.stringify(stored));
-                    }
+                    if (stored) { stored.user.full_name = data.full_name; localStorage.setItem('pw_session', JSON.stringify(stored)); }
                 }
-            } catch (err) {
-                console.error("Failed to fetch fresh profile data:", err);
-            }
+            } catch (err) { console.error('Failed to fetch fresh profile data:', err); }
         };
         fetchProfile();
     }, [user.id]);
@@ -63,53 +51,26 @@ export default function ProfileSettings() {
 
     const handleSaveProfile = async () => {
         setSaving(true); setError(''); setSuccess('');
-
-        // Validation for email
         const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-        if (!emailRegex.test(email)) {
-            setError('Please enter a valid email address.');
-            setSaving(false);
-            return;
-        }
-
-        // Validation for phone
+        if (!emailRegex.test(email)) { setError('Please enter a valid email address.'); setSaving(false); return; }
         const phoneRegex = /^\d{10}$/;
-        if (!phoneRegex.test(phone)) {
-            setError('Phone number must be exactly 10 digits.');
-            setSaving(false);
-            return;
-        }
-
+        if (!phoneRegex.test(phone)) { setError('Phone number must be exactly 10 digits.'); setSaving(false); return; }
         try {
             let profileUrl = user.profile_photo_url;
-
             if (photoFile) {
-                const ext = photoFile.name.split('.').pop();
-                const path = `${user.id}/profile.${ext}`;
-                const { error: upErr } = await supabase.storage.from('profile-photos').upload(path, photoFile, { upsert: true });
-                if (upErr) throw upErr;
-                const { data: { publicUrl } } = supabase.storage.from('profile-photos').getPublicUrl(path);
-                profileUrl = publicUrl;
+                // Convert file to base64 data URL
+                profileUrl = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = ev => resolve(ev.target.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(photoFile);
+                });
             }
-
-            const { error: updateErr } = await supabase.from('users')
-                .update({ phone, email, full_name: fullName, profile_photo_url: profileUrl, updated_at: new Date().toISOString() })
-                .eq('id', user.id);
-            if (updateErr) throw updateErr;
-
-            // Update local session
+            await api.patch(`/api/users/${user.id}/profile`, { phone, email, full_name: fullName, profile_photo_url: profileUrl });
             const stored = JSON.parse(localStorage.getItem('pw_session'));
-            if (stored) {
-                stored.user = { ...stored.user, phone, email, full_name: fullName, profile_photo_url: profileUrl };
-                localStorage.setItem('pw_session', JSON.stringify(stored));
-            }
-
-            // Update Zustand store
+            if (stored) { stored.user = { ...stored.user, phone, email, full_name: fullName, profile_photo_url: profileUrl }; localStorage.setItem('pw_session', JSON.stringify(stored)); }
             useAuthStore.setState({ user: { ...user, phone, email, full_name: fullName, profile_photo_url: profileUrl } });
-
-            await supabase.from('audit_logs').insert({ action: 'PROFILE_UPDATED', user_id: user.id, details: { email, phone, full_name: fullName } });
-            setSuccess('Profile updated successfully');
-            setPhotoFile(null);
+            setSuccess('Profile updated successfully'); setPhotoFile(null);
         } catch (err) { setError(err.message); }
         setSaving(false);
     };
@@ -120,7 +81,6 @@ export default function ProfileSettings() {
         if (newPw !== confirmPw) { setError('Passwords do not match'); setPwSaving(false); return; }
         try {
             await changePassword(currentPw, newPw);
-            await supabase.from('audit_logs').insert({ action: 'PASSWORD_CHANGED', user_id: user.id });
             setSuccess('Password changed successfully');
             setCurrentPw(''); setNewPw(''); setConfirmPw('');
         } catch (err) { setError(err.message); }

@@ -90,8 +90,8 @@ export default function FirstLoginPage() {
         <Box sx={{
             minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: isDark
-                ? `radial-gradient(ellipse at 30% 40%, rgba(108, 99, 255, 0.12) 0%, transparent 60%), ${theme.palette.background.default}`
-                : `radial-gradient(ellipse at 30% 40%, rgba(108, 99, 255, 0.06) 0%, transparent 60%), ${theme.palette.background.default}`,
+                ? `radial-gradient(ellipse at 30% 40%, rgba(217, 119, 6, 0.12) 0%, transparent 60%), ${theme.palette.background.default}`
+                : `radial-gradient(ellipse at 30% 40%, rgba(217, 119, 6, 0.06) 0%, transparent 60%), ${theme.palette.background.default}`,
             p: 2,
         }}>
             <Box sx={{ width: '100%', maxWidth: 520 }}>
@@ -110,7 +110,7 @@ export default function FirstLoginPage() {
                     ))}
                 </Stepper>
 
-                <Card sx={{ border: '1px solid rgba(108, 99, 255, 0.15)' }}>
+                <Card sx={{ border: '1px solid rgba(217, 119, 6, 0.15)' }}>
                     <CardContent sx={{ p: 4 }}>
                         {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{error}</Alert>}
 
@@ -147,7 +147,7 @@ export default function FirstLoginPage() {
                                 </Box>
                                 <Avatar
                                     src={photoPreview}
-                                    sx={{ width: 120, height: 120, mx: 'auto', mb: 2, border: '3px solid rgba(108, 99, 255, 0.3)' }}
+                                    sx={{ width: 120, height: 120, mx: 'auto', mb: 2, border: '3px solid rgba(217, 119, 6, 0.3)' }}
                                 />
                                 <input type="file" accept="image/*" onChange={handleFileChange}
                                     id="photo-upload" style={{ display: 'none' }} />

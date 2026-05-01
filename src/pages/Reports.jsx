@@ -11,7 +11,7 @@ import {
 import api from '../lib/api';
 import useAuthStore from '../store/authStore';
 
-const COLORS = ['#6C63FF', '#4ECDC4', '#FF4D6A', '#FFB74D', '#00D9FF', '#A78BFA'];
+const COLORS = ['#D97706', '#0284C7', '#B45309', '#78350F', '#00D9FF', '#A78BFA'];
 
 export default function Reports() {
     const { user } = useAuthStore();
@@ -149,7 +149,7 @@ export default function Reports() {
                 <Grid size={{ xs: 12, md: 7 }}>
                     <Card><CardContent sx={{ p: 3 }}>
                         <Typography variant="h6" fontWeight={600} gutterBottom>
-                            <BarChartIcon sx={{ mr: 1, verticalAlign: 'middle', color: '#6C63FF' }} />
+                            <BarChartIcon sx={{ mr: 1, verticalAlign: 'middle', color: '#D97706' }} />
                             Score Distribution
                         </Typography>
                         <ResponsiveContainer width="100%" height={260}>
@@ -158,7 +158,7 @@ export default function Reports() {
                                 <XAxis dataKey="range" tick={{ fill: '#94A3B8', fontSize: 12 }} />
                                 <YAxis tick={{ fill: '#94A3B8', fontSize: 12 }} />
                                 <RTooltip contentStyle={{ background: '#0F1629', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8 }} />
-                                <Bar dataKey="count" fill="#6C63FF" radius={[6, 6, 0, 0]} />
+                                <Bar dataKey="count" fill="#D97706" radius={[6, 6, 0, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
                     </CardContent></Card>
@@ -167,7 +167,7 @@ export default function Reports() {
                 <Grid size={{ xs: 12, md: 5 }}>
                     <Card><CardContent sx={{ p: 3 }}>
                         <Typography variant="h6" fontWeight={600} gutterBottom>
-                            <PieChartOutline sx={{ mr: 1, verticalAlign: 'middle', color: '#FF4D6A' }} />
+                            <PieChartOutline sx={{ mr: 1, verticalAlign: 'middle', color: '#B45309' }} />
                             Flags by Module
                         </Typography>
                         {flagBreakdown.length > 0 ? (
@@ -194,7 +194,7 @@ export default function Reports() {
                 <Grid size={{ xs: 12, md: 6 }}>
                     <Card><CardContent sx={{ p: 3 }}>
                         <Typography variant="h6" fontWeight={600} gutterBottom>
-                            <Assessment sx={{ mr: 1, verticalAlign: 'middle', color: '#4ECDC4' }} />
+                            <Assessment sx={{ mr: 1, verticalAlign: 'middle', color: '#0284C7' }} />
                             Course-wise Performance
                         </Typography>
                         {courseStats.length > 0 ? (
@@ -204,7 +204,7 @@ export default function Reports() {
                                     <XAxis type="number" tick={{ fill: '#94A3B8', fontSize: 12 }} domain={[0, 100]} />
                                     <YAxis type="category" dataKey="name" tick={{ fill: '#94A3B8', fontSize: 11 }} width={100} />
                                     <RTooltip contentStyle={{ background: '#0F1629', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8 }} />
-                                    <Bar dataKey="avgScore" fill="#4ECDC4" radius={[0, 6, 6, 0]} name="Avg %" />
+                                    <Bar dataKey="avgScore" fill="#0284C7" radius={[0, 6, 6, 0]} name="Avg %" />
                                 </BarChart>
                             </ResponsiveContainer>
                         ) : (
@@ -227,7 +227,7 @@ export default function Reports() {
                                     <YAxis tick={{ fill: '#94A3B8', fontSize: 12 }} />
                                     <RTooltip contentStyle={{ background: '#0F1629', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8 }} />
                                     <Legend />
-                                    <Line type="monotone" dataKey="avgScore" stroke="#6C63FF" strokeWidth={2} dot={{ fill: '#6C63FF' }} name="Avg %" />
+                                    <Line type="monotone" dataKey="avgScore" stroke="#D97706" strokeWidth={2} dot={{ fill: '#D97706' }} name="Avg %" />
                                     <Line type="monotone" dataKey="exams" stroke="#00D9FF" strokeWidth={2} dot={{ fill: '#00D9FF' }} name="Exams" />
                                 </LineChart>
                             </ResponsiveContainer>

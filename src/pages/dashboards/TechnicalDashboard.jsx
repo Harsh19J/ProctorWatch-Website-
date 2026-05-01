@@ -68,7 +68,7 @@ function DbTableRow({ table, idx }) {
         <TableRow ref={ref} sx={{ animation: `fadeSlideUp 0.35s ease ${idx * 0.06}s both`, '&:hover td': { bgcolor: 'action.hover' } }}>
             <TableCell sx={{ fontFamily: 'monospace', fontWeight: 600, fontSize: '0.85rem' }}>{table.name}</TableCell>
             <TableCell align="right">
-                <Chip label={display} size="small" sx={{ fontFamily: 'monospace', fontWeight: 700, bgcolor: 'rgba(108,99,255,0.1)', color: '#6C63FF' }} />
+                <Chip label={display} size="small" sx={{ fontFamily: 'monospace', fontWeight: 700, bgcolor: 'rgba(217,119,6,0.1)', color: '#D97706' }} />
             </TableCell>
         </TableRow>
     );
@@ -127,7 +127,7 @@ export default function TechnicalDashboard() {
                 <Box>
                     <Typography variant="h4" fontWeight={800} sx={{ letterSpacing: '-0.02em', mb: 0.5 }}>
                         Technical{' '}
-                        <Box component="span" sx={{ background: 'linear-gradient(90deg, #FF4D6A, #FFB74D)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                        <Box component="span" sx={{ background: 'linear-gradient(90deg, #B45309, #78350F)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                             Dashboard
                         </Box>
                     </Typography>
@@ -143,7 +143,7 @@ export default function TechnicalDashboard() {
                 sx={{
                     mb: 3,
                     '& .MuiTab-root': { fontWeight: 600, borderRadius: '8px 8px 0 0', fontSize: '0.85rem' },
-                    '& .MuiTabs-indicator': { background: 'linear-gradient(90deg, #FF4D6A, #FFB74D)', borderRadius: 2 },
+                    '& .MuiTabs-indicator': { background: 'linear-gradient(90deg, #B45309, #78350F)', borderRadius: 2 },
                 }}
             >
                 <Tab label="System Info" icon={<Memory sx={{ fontSize: 18 }} />} iconPosition="start" />
@@ -156,10 +156,10 @@ export default function TechnicalDashboard() {
             {tab === 0 && (
                 <Grid container spacing={3}>
                     {[
-                        { icon: <Memory />, color: '#6C63FF', value: systemInfo?.cpus || '—', label: 'CPU Cores' },
-                        { icon: <Speed />, color: '#38BDF8', value: systemInfo?.totalMemory ? `${systemInfo.totalMemory} GB` : '—', label: 'Total RAM' },
-                        { icon: <Storage />, color: '#4ECDC4', value: systemInfo?.freeMemory ? `${systemInfo.freeMemory} GB` : '—', label: 'Free RAM' },
-                        { icon: <BugReport />, color: '#FFB74D', value: systemInfo?.platform || 'web', label: 'Platform' },
+                        { icon: <Memory />, color: '#D97706', value: systemInfo?.cpus || '—', label: 'CPU Cores' },
+                        { icon: <Speed />, color: '#FBBF24', value: systemInfo?.totalMemory ? `${systemInfo.totalMemory} GB` : '—', label: 'Total RAM' },
+                        { icon: <Storage />, color: '#0284C7', value: systemInfo?.freeMemory ? `${systemInfo.freeMemory} GB` : '—', label: 'Free RAM' },
+                        { icon: <BugReport />, color: '#78350F', value: systemInfo?.platform || 'web', label: 'Platform' },
                     ].map((s, i) => (
                         <Grid key={i} item xs={12} sm={6} md={3}>
                             <SysCard {...s} delay={i * 0.07} />
@@ -169,7 +169,7 @@ export default function TechnicalDashboard() {
                         <Card>
                             <CardContent sx={{ p: 3 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
-                                    <Box sx={{ p: 1, borderRadius: '10px', bgcolor: 'rgba(108,99,255,0.1)', color: '#6C63FF', display: 'flex' }}>
+                                    <Box sx={{ p: 1, borderRadius: '10px', bgcolor: 'rgba(217,119,6,0.1)', color: '#D97706', display: 'flex' }}>
                                         <Storage sx={{ fontSize: 20 }} />
                                     </Box>
                                     <Typography variant="h6" fontWeight={700}>Database Collections</Typography>
@@ -206,7 +206,7 @@ export default function TechnicalDashboard() {
                             }}
                         />
                         <Button variant="contained" onClick={runQuery} startIcon={<Terminal />}
-                            sx={{ mb: 2, borderRadius: '10px', fontWeight: 700, background: 'linear-gradient(135deg, #6C63FF, #38BDF8)', boxShadow: '0 4px 14px rgba(108,99,255,0.35)' }}>
+                            sx={{ mb: 2, borderRadius: '10px', fontWeight: 700, background: 'linear-gradient(135deg, #D97706, #FBBF24)', boxShadow: '0 4px 14px rgba(217,119,6,0.35)' }}>
                             Execute
                         </Button>
                         {queryError && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{queryError}</Alert>}

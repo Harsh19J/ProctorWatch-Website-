@@ -102,14 +102,14 @@ export default function ProfileSettings() {
                         <Typography variant="h6" fontWeight={600} gutterBottom>Profile Information</Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 3 }}>
                             <Box sx={{ position: 'relative' }}>
-                                <Avatar src={photoPreview} sx={{ width: 88, height: 88, fontSize: 32, border: '3px solid rgba(108,99,255,0.3)' }}>
+                                <Avatar src={photoPreview} sx={{ width: 88, height: 88, fontSize: 32, border: '3px solid rgba(217,119,6,0.3)' }}>
                                     {(fullName || user.username)?.[0]?.toUpperCase()}
                                 </Avatar>
                                 <input type="file" accept="image/*" onChange={handlePhotoChange} id="avatar-upload" style={{ display: 'none' }} />
                                 <label htmlFor="avatar-upload">
                                     <Box sx={{
                                         position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, borderRadius: '50%',
-                                        bgcolor: '#6C63FF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                                        bgcolor: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
                                     }}>
                                         <CameraAlt sx={{ fontSize: 14, color: '#fff' }} />
                                     </Box>

@@ -61,11 +61,11 @@ const navConfig = {
 };
 
 export const roleColors = {
-    technical: '#FF4D6A',
-    admin: '#6C63FF',
-    teacher: '#38BDF8',
-    student: '#4ECDC4',
-    parent: '#FFB74D',
+    technical: '#B45309',
+    admin: '#D97706',
+    teacher: '#FBBF24',
+    student: '#0284C7',
+    parent: '#78350F',
 };
 
 const roleLabels = {
@@ -166,7 +166,7 @@ export default function DashboardLayout({ children }) {
 
     const navItems = navConfig[user.role] || navConfig.student;
     const currentWidth = collapsed ? COLLAPSED_WIDTH : DRAWER_WIDTH;
-    const roleColor = roleColors[user.role] || '#6C63FF';
+    const roleColor = roleColors[user.role] || '#D97706';
 
     const handleLogout = async () => {
         await logout();
@@ -188,9 +188,9 @@ export default function DashboardLayout({ children }) {
             }}>
                 <Box sx={{
                     width: 38, height: 38, borderRadius: '11px', flexShrink: 0,
-                    background: 'linear-gradient(135deg, #6C63FF, #38BDF8)',
+                    background: 'linear-gradient(135deg, #D97706, #FBBF24)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: '0 4px 14px rgba(108,99,255,0.35)',
+                    boxShadow: '0 4px 14px rgba(217,119,6,0.35)',
                     animation: 'pulseRing 3s ease-in-out infinite',
                     cursor: 'pointer',
                     transition: 'transform 0.3s',
@@ -202,7 +202,7 @@ export default function DashboardLayout({ children }) {
                     <Box sx={{ overflow: 'hidden', whiteSpace: 'nowrap', animation: 'fadeSlideRight 0.3s ease both' }}>
                         <Typography variant="subtitle1" fontWeight={800} sx={{
                             lineHeight: 1.2, letterSpacing: '-0.01em',
-                            background: 'linear-gradient(90deg, #6C63FF, #38BDF8)',
+                            background: 'linear-gradient(90deg, #D97706, #FBBF24)',
                             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                         }}>
                             ProctorWatch
@@ -267,7 +267,7 @@ export default function DashboardLayout({ children }) {
                             <IconButton onClick={(e) => { e.stopPropagation(); handleLogout(); }} size="small" sx={{
                                 color: 'text.secondary',
                                 transition: 'all 0.2s',
-                                '&:hover': { color: '#FF4D6A', transform: 'rotate(10deg)' },
+                                '&:hover': { color: '#B45309', transform: 'rotate(10deg)' },
                             }}>
                                 <Logout fontSize="small" />
                             </IconButton>
@@ -291,7 +291,7 @@ export default function DashboardLayout({ children }) {
                     <Tooltip title="Logout" placement="right">
                         <IconButton onClick={(e) => { e.stopPropagation(); handleLogout(); }} size="small" sx={{
                             color: 'text.secondary',
-                            '&:hover': { color: '#FF4D6A' },
+                            '&:hover': { color: '#B45309' },
                         }}>
                             <Logout fontSize="small" />
                         </IconButton>
@@ -382,7 +382,7 @@ export default function DashboardLayout({ children }) {
                             <IconButton onClick={toggleMode} sx={{
                                 color: 'text.secondary',
                                 transition: 'transform 0.5s, color 0.2s',
-                                '&:hover': { transform: 'rotate(180deg)', color: '#FFB74D' },
+                                '&:hover': { transform: 'rotate(180deg)', color: '#78350F' },
                             }}>
                                 {mode === 'dark' ? <Brightness7 sx={{ fontSize: 20 }} /> : <Brightness4 sx={{ fontSize: 20 }} />}
                             </IconButton>

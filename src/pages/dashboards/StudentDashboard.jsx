@@ -113,7 +113,7 @@ export default function StudentDashboard() {
                 <Box sx={{ animation: 'fadeSlideRight 0.45s ease both' }}>
                     <Typography variant="h4" fontWeight={800} sx={{ letterSpacing: '-0.02em', mb: 0.5 }}>
                         Welcome back,{' '}
-                        <Box component="span" sx={{ background: 'linear-gradient(90deg, #4ECDC4, #38BDF8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                        <Box component="span" sx={{ background: 'linear-gradient(90deg, #0284C7, #FBBF24)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                             {user.full_name || user.username?.split('@')[0]}
                         </Box>
                     </Typography>
@@ -146,13 +146,13 @@ export default function StudentDashboard() {
             {/* Stats */}
             <Grid container spacing={2.5} sx={{ mb: 4 }}>
                 <Grid item xs={4}>
-                    <AnimStat value={pastResults.length} label="Exams Taken" color="#6C63FF" icon={<Assignment sx={{ fontSize: 22 }} />} delay={0.1} />
+                    <AnimStat value={pastResults.length} label="Exams Taken" color="#D97706" icon={<Assignment sx={{ fontSize: 22 }} />} delay={0.1} />
                 </Grid>
                 <Grid item xs={4}>
-                    <AnimStat value={avgScore} label="Avg Score" color="#4ECDC4" icon={<TrendingUp sx={{ fontSize: 22 }} />} delay={0.18} />
+                    <AnimStat value={avgScore} label="Avg Score" color="#0284C7" icon={<TrendingUp sx={{ fontSize: 22 }} />} delay={0.18} />
                 </Grid>
                 <Grid item xs={4}>
-                    <AnimStat value={flagCount} label="Total Flags" color={flagCount > 0 ? '#FF4D6A' : '#4ECDC4'} icon={<Flag sx={{ fontSize: 22 }} />} delay={0.26} />
+                    <AnimStat value={flagCount} label="Total Flags" color={flagCount > 0 ? '#B45309' : '#0284C7'} icon={<Flag sx={{ fontSize: 22 }} />} delay={0.26} />
                 </Grid>
             </Grid>
 
@@ -162,7 +162,7 @@ export default function StudentDashboard() {
                     <Card>
                         <CardContent sx={{ p: 3 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
-                                <Box sx={{ p: 1, borderRadius: '10px', bgcolor: 'rgba(108,99,255,0.1)', color: '#6C63FF', display: 'flex' }}>
+                                <Box sx={{ p: 1, borderRadius: '10px', bgcolor: 'rgba(217,119,6,0.1)', color: '#D97706', display: 'flex' }}>
                                     <CalendarMonth sx={{ fontSize: 20 }} />
                                 </Box>
                                 <Typography variant="h6" fontWeight={700}>Upcoming Exams</Typography>
@@ -179,7 +179,7 @@ export default function StudentDashboard() {
                                         const state = getExamState(exam);
                                         const session = mySessionMap[exam.id];
                                         const start = new Date(exam.start_time);
-                                        const stateColors = { ready: '#4ECDC4', active: '#FFB74D', completed: '#4ECDC4', invalidated: '#FF4D6A', ended: 'rgba(128,128,128,0.4)', upcoming: 'rgba(108,99,255,0.3)' };
+                                        const stateColors = { ready: '#0284C7', active: '#78350F', completed: '#0284C7', invalidated: '#B45309', ended: 'rgba(128,128,128,0.4)', upcoming: 'rgba(217,119,6,0.3)' };
                                         const bc = stateColors[state] || 'divider';
                                         return (
                                             <Box key={exam.id} sx={{
@@ -223,7 +223,7 @@ export default function StudentDashboard() {
                     <Card sx={{ height: '100%' }}>
                         <CardContent sx={{ p: 3 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
-                                <Box sx={{ p: 1, borderRadius: '10px', bgcolor: 'rgba(78,205,196,0.1)', color: '#4ECDC4', display: 'flex' }}>
+                                <Box sx={{ p: 1, borderRadius: '10px', bgcolor: 'rgba(78,205,196,0.1)', color: '#0284C7', display: 'flex' }}>
                                     <TrendingUp sx={{ fontSize: 20 }} />
                                 </Box>
                                 <Typography variant="h6" fontWeight={700}>Recent Results</Typography>
@@ -241,7 +241,7 @@ export default function StudentDashboard() {
                                             sx={{
                                                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                                                 p: 1.75, mb: 1, borderRadius: 2,
-                                                bgcolor: result.status === 'invalidated' ? 'rgba(255,77,106,0.04)' : 'action.hover',
+                                                bgcolor: result.status === 'invalidated' ? 'rgba(180,83,9,0.04)' : 'action.hover',
                                                 cursor: 'pointer',
                                                 transition: 'all 180ms ease',
                                                 border: '1px solid transparent',

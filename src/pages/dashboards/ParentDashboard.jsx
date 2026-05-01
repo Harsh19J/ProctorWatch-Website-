@@ -87,7 +87,7 @@ export default function ParentDashboard() {
             <Box sx={{ mb: 4, animation: 'fadeSlideRight 0.45s ease both' }}>
                 <Typography variant="h4" fontWeight={800} sx={{ letterSpacing: '-0.02em', mb: 0.5 }}>
                     Parent{' '}
-                    <Box component="span" sx={{ background: 'linear-gradient(90deg, #FFB74D, #F97316)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                    <Box component="span" sx={{ background: 'linear-gradient(90deg, #78350F, #F97316)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                         Dashboard
                     </Box>
                 </Typography>
@@ -123,16 +123,16 @@ export default function ParentDashboard() {
                         <Grid container spacing={3}>
                             {/* Stats */}
                             <Grid item xs={6} sm={3}>
-                                <MetricCard value={childData.avgScore} label="Avg Score" icon={<TrendingUp />} color="#6C63FF" delay={0.05} />
+                                <MetricCard value={childData.avgScore} label="Avg Score" icon={<TrendingUp />} color="#D97706" delay={0.05} />
                             </Grid>
                             <Grid item xs={6} sm={3}>
-                                <MetricCard value={childData.integrityScore} label="Integrity" icon={<CheckCircle />} color="#4ECDC4" delay={0.11} />
+                                <MetricCard value={childData.integrityScore} label="Integrity" icon={<CheckCircle />} color="#0284C7" delay={0.11} />
                             </Grid>
                             <Grid item xs={6} sm={3}>
-                                <MetricCard value={childData.attendance} label="Attendance" icon={<Person />} color="#38BDF8" delay={0.17} />
+                                <MetricCard value={childData.attendance} label="Attendance" icon={<Person />} color="#FBBF24" delay={0.17} />
                             </Grid>
                             <Grid item xs={6} sm={3}>
-                                <MetricCard value={childData.sessions.length} label="Exams Taken" icon={<Warning />} color="#FFB74D" delay={0.23} />
+                                <MetricCard value={childData.sessions.length} label="Exams Taken" icon={<Warning />} color="#78350F" delay={0.23} />
                             </Grid>
 
                             {/* Upcoming Exams */}
@@ -140,7 +140,7 @@ export default function ParentDashboard() {
                                 <Card sx={{ height: '100%' }}>
                                     <CardContent sx={{ p: 3 }}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
-                                            <Box sx={{ p: 1, borderRadius: '10px', bgcolor: 'rgba(108,99,255,0.1)', color: '#6C63FF', display: 'flex' }}>
+                                            <Box sx={{ p: 1, borderRadius: '10px', bgcolor: 'rgba(217,119,6,0.1)', color: '#D97706', display: 'flex' }}>
                                                 <CalendarMonth sx={{ fontSize: 20 }} />
                                             </Box>
                                             <Typography variant="h6" fontWeight={700}>Upcoming Exams</Typography>
@@ -157,7 +157,7 @@ export default function ParentDashboard() {
                                                     bgcolor: 'action.hover',
                                                     border: '1px solid', borderColor: 'divider',
                                                     transition: 'all 180ms ease',
-                                                    '&:hover': { transform: 'translateX(4px)', borderColor: 'rgba(108,99,255,0.3)' },
+                                                    '&:hover': { transform: 'translateX(4px)', borderColor: 'rgba(217,119,6,0.3)' },
                                                     animation: `fadeSlideUp 0.38s ease ${idx * 0.07}s both`,
                                                 }}>
                                                     <Typography variant="body2" fontWeight={600}>{e.title}</Typography>
@@ -176,7 +176,7 @@ export default function ParentDashboard() {
                                 <Card sx={{ height: '100%' }}>
                                     <CardContent sx={{ p: 3 }}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
-                                            <Box sx={{ p: 1, borderRadius: '10px', bgcolor: 'rgba(56,189,248,0.1)', color: '#38BDF8', display: 'flex' }}>
+                                            <Box sx={{ p: 1, borderRadius: '10px', bgcolor: 'rgba(251,191,36,0.1)', color: '#FBBF24', display: 'flex' }}>
                                                 <ContactMail sx={{ fontSize: 20 }} />
                                             </Box>
                                             <Typography variant="h6" fontWeight={700}>Teacher Contacts</Typography>
@@ -191,7 +191,7 @@ export default function ParentDashboard() {
                                                 {childData.teachers.map((tc, i) => (
                                                     <ListItem key={i} sx={{ px: 0, transition: 'all 180ms ease', borderRadius: 2, '&:hover': { bgcolor: 'action.hover', px: 1 } }}>
                                                         <ListItemAvatar>
-                                                            <Avatar sx={{ bgcolor: 'rgba(56,189,248,0.15)', color: '#38BDF8', fontWeight: 700 }}>
+                                                            <Avatar sx={{ bgcolor: 'rgba(251,191,36,0.15)', color: '#FBBF24', fontWeight: 700 }}>
                                                                 {tc.users?.username?.[0] || 'T'}
                                                             </Avatar>
                                                         </ListItemAvatar>

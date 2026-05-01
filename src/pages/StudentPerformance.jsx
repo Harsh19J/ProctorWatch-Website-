@@ -98,10 +98,10 @@ export default function StudentPerformance() {
 
     const getScoreColor = (score, total) => {
         const pct = (score / total) * 100;
-        if (pct >= 75) return '#4ECDC4';
-        if (pct >= 50) return '#6C63FF';
-        if (pct >= 40) return '#FFB74D';
-        return '#FF4D6A';
+        if (pct >= 75) return '#0284C7';
+        if (pct >= 50) return '#D97706';
+        if (pct >= 40) return '#78350F';
+        return '#B45309';
     };
 
     return (
@@ -138,28 +138,28 @@ export default function StudentPerformance() {
                         </Grid>
                         <Grid size={{ xs: 6, md: 2.4 }}>
                             <Card><CardContent sx={{ p: 2, textAlign: 'center' }}>
-                                <TrendingUp sx={{ color: '#6C63FF' }} />
+                                <TrendingUp sx={{ color: '#D97706' }} />
                                 <Typography variant="h4" fontWeight={700}>{avgScore}%</Typography>
                                 <Typography variant="caption" color="text.secondary">Avg Score</Typography>
                             </CardContent></Card>
                         </Grid>
                         <Grid size={{ xs: 6, md: 2.4 }}>
                             <Card><CardContent sx={{ p: 2, textAlign: 'center' }}>
-                                <EmojiEvents sx={{ color: '#FFB74D' }} />
+                                <EmojiEvents sx={{ color: '#78350F' }} />
                                 <Typography variant="h4" fontWeight={700}>{Math.round(bestScore)}%</Typography>
                                 <Typography variant="caption" color="text.secondary">Best Score</Typography>
                             </CardContent></Card>
                         </Grid>
                         <Grid size={{ xs: 6, md: 2.4 }}>
                             <Card><CardContent sx={{ p: 2, textAlign: 'center' }}>
-                                <CheckCircle sx={{ color: '#4ECDC4' }} />
+                                <CheckCircle sx={{ color: '#0284C7' }} />
                                 <Typography variant="h4" fontWeight={700}>{passRate}%</Typography>
                                 <Typography variant="caption" color="text.secondary">Pass Rate</Typography>
                             </CardContent></Card>
                         </Grid>
                         <Grid size={{ xs: 6, md: 2.4 }}>
                             <Card><CardContent sx={{ p: 2, textAlign: 'center' }}>
-                                <Cancel sx={{ color: totalFlags > 0 ? '#FF4D6A' : '#4ECDC4' }} />
+                                <Cancel sx={{ color: totalFlags > 0 ? '#B45309' : '#0284C7' }} />
                                 <Typography variant="h4" fontWeight={700}>{totalFlags}</Typography>
                                 <Typography variant="caption" color="text.secondary">Total Flags</Typography>
                             </CardContent></Card>

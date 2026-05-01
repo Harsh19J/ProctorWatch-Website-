@@ -159,8 +159,8 @@ export default function AdminOverridePanel({ open, onClose, sessionId, studentId
 
     return (
         <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-            <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: 'rgba(255,77,106,0.08)' }}>
-                <AdminPanelSettings sx={{ color: '#FF4D6A' }} />
+            <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: 'rgba(180,83,9,0.08)' }}>
+                <AdminPanelSettings sx={{ color: '#B45309' }} />
                 <Typography component="span" variant="subtitle1" fontWeight={700}>Live Admin Override</Typography>
             </DialogTitle>
 
@@ -249,8 +249,8 @@ export default function AdminOverridePanel({ open, onClose, sessionId, studentId
                         {/* Purpose badge */}
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                             {isFaceReset
-                                ? <Fingerprint sx={{ color: '#6C63FF' }} />
-                                : <LockOpen sx={{ color: '#FFB74D' }} />}
+                                ? <Fingerprint sx={{ color: '#D97706' }} />
+                                : <LockOpen sx={{ color: '#78350F' }} />}
                             <Chip
                                 label={isFaceReset ? 'Face ID Reset' : 'Module Override'}
                                 color={isFaceReset ? 'primary' : 'warning'}

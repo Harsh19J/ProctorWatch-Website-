@@ -76,7 +76,7 @@ export default function TeacherDashboard() {
             <Box sx={{ mb: 4, animation: 'fadeSlideRight 0.45s ease both' }}>
                 <Typography variant="h4" fontWeight={800} sx={{ letterSpacing: '-0.02em', mb: 0.5 }}>
                     Teacher{' '}
-                    <Box component="span" sx={{ background: 'linear-gradient(90deg, #38BDF8, #6C63FF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                    <Box component="span" sx={{ background: 'linear-gradient(90deg, #FBBF24, #D97706)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                         Dashboard
                     </Box>
                 </Typography>
@@ -86,13 +86,13 @@ export default function TeacherDashboard() {
             {/* Stats */}
             <Grid container spacing={3} sx={{ mb: 4 }}>
                 <Grid item xs={12} sm={4}>
-                    <StatCard title="Assigned Courses" value={courses.length} icon={<School />} color="#38BDF8" delay={0.05} />
+                    <StatCard title="Assigned Courses" value={courses.length} icon={<School />} color="#FBBF24" delay={0.05} />
                 </Grid>
                 <Grid item xs={12} sm={4}>
-                    <StatCard title="Tests Created" value={tests.length} icon={<Assignment />} color="#6C63FF" delay={0.12} />
+                    <StatCard title="Tests Created" value={tests.length} icon={<Assignment />} color="#D97706" delay={0.12} />
                 </Grid>
                 <Grid item xs={12} sm={4}>
-                    <StatCard title="Pending Flags" value={pendingFlags} icon={<Flag />} color={pendingFlags > 0 ? '#FF4D6A' : '#4ECDC4'} delay={0.19} />
+                    <StatCard title="Pending Flags" value={pendingFlags} icon={<Flag />} color={pendingFlags > 0 ? '#B45309' : '#0284C7'} delay={0.19} />
                 </Grid>
             </Grid>
 
@@ -103,12 +103,12 @@ export default function TeacherDashboard() {
                         <CardContent sx={{ p: 3 }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2.5 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                    <Box sx={{ p: 1, borderRadius: '10px', bgcolor: 'rgba(56,189,248,0.1)', color: '#38BDF8', display: 'flex' }}>
+                                    <Box sx={{ p: 1, borderRadius: '10px', bgcolor: 'rgba(251,191,36,0.1)', color: '#FBBF24', display: 'flex' }}>
                                         <School sx={{ fontSize: 20 }} />
                                     </Box>
                                     <Typography variant="h6" fontWeight={700}>My Courses</Typography>
                                 </Box>
-                                <Chip label={`${courses.length} active`} size="small" sx={{ bgcolor: 'rgba(56,189,248,0.08)', color: '#38BDF8', fontWeight: 600, fontSize: '0.72rem' }} />
+                                <Chip label={`${courses.length} active`} size="small" sx={{ bgcolor: 'rgba(251,191,36,0.08)', color: '#FBBF24', fontWeight: 600, fontSize: '0.72rem' }} />
                             </Box>
                             {courses.length === 0 ? (
                                 <Box sx={{ textAlign: 'center', py: 5 }}>
@@ -121,7 +121,7 @@ export default function TeacherDashboard() {
                                         <Box key={course.id} sx={{ animation: `fadeSlideUp 0.38s ease ${idx * 0.06}s both` }}>
                                             <ListItem sx={{ px: 0, py: 1.25, transition: 'all 180ms ease', borderRadius: 2, '&:hover': { bgcolor: 'action.hover', pl: 1 } }}>
                                                 <ListItemIcon>
-                                                    <Avatar sx={{ width: 36, height: 36, bgcolor: 'rgba(56,189,248,0.15)', color: '#38BDF8', fontSize: '0.8rem', fontWeight: 700 }}>
+                                                    <Avatar sx={{ width: 36, height: 36, bgcolor: 'rgba(251,191,36,0.15)', color: '#FBBF24', fontSize: '0.8rem', fontWeight: 700 }}>
                                                         {course.code?.slice(0, 2)}
                                                     </Avatar>
                                                 </ListItemIcon>
@@ -146,7 +146,7 @@ export default function TeacherDashboard() {
                         <CardContent sx={{ p: 3 }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2.5 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                    <Box sx={{ p: 1, borderRadius: '10px', bgcolor: 'rgba(108,99,255,0.1)', color: '#6C63FF', display: 'flex' }}>
+                                    <Box sx={{ p: 1, borderRadius: '10px', bgcolor: 'rgba(217,119,6,0.1)', color: '#D97706', display: 'flex' }}>
                                         <Assignment sx={{ fontSize: 20 }} />
                                     </Box>
                                     <Typography variant="h6" fontWeight={700}>Recent Tests</Typography>
@@ -171,7 +171,7 @@ export default function TeacherDashboard() {
                                                 mb: 1.5, p: 2, borderRadius: 2, bgcolor: 'action.hover',
                                                 border: '1px solid', borderColor: 'divider',
                                                 transition: 'all 180ms ease',
-                                                '&:hover': { bgcolor: 'action.selected', transform: 'translateX(3px)', borderColor: isActive ? '#4ECDC4' : 'divider' },
+                                                '&:hover': { bgcolor: 'action.selected', transform: 'translateX(3px)', borderColor: isActive ? '#0284C7' : 'divider' },
                                                 animation: `fadeSlideUp 0.38s ease ${idx * 0.06}s both`,
                                             }}>
                                                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>

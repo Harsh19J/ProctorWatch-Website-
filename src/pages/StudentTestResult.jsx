@@ -158,7 +158,7 @@ export default function StudentTestResult() {
                         <Chip label="RESULT INVALIDATED" color="error" sx={{ fontSize: '1.2rem', py: 2, px: 1, fontWeight: 'bold' }} />
                     ) : (
                         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                            <Button variant="contained" sx={{ bgcolor: '#6C63FF', color: 'white' }} startIcon={<AutoAwesome />} onClick={handleAIAdvisor}>
+                            <Button variant="contained" sx={{ bgcolor: '#D97706', color: 'white' }} startIcon={<AutoAwesome />} onClick={handleAIAdvisor}>
                                 AI Advisor
                             </Button>
                             <Chip label={`Score: ${session.score} / ${session.tests?.total_marks}`}
@@ -204,7 +204,7 @@ export default function StudentTestResult() {
                                 <CardContent sx={{ p: 0 }}>
                                     <Table size="small">
                                         <TableHead>
-                                            <TableRow sx={{ bgcolor: 'rgba(108,99,255,0.05)' }}>
+                                            <TableRow sx={{ bgcolor: 'rgba(217,119,6,0.05)' }}>
                                                 <TableCell sx={{ fontWeight: 700 }}>Type</TableCell>
                                                 <TableCell sx={{ fontWeight: 700 }}>Severity</TableCell>
                                                 <TableCell sx={{ fontWeight: 700 }}>Details</TableCell>
@@ -220,7 +220,7 @@ export default function StudentTestResult() {
                                                     key={f.id}
                                                     hover
                                                     sx={{
-                                                        borderLeft: (f.severity === 'high' || f.severity === 'RED') ? '3px solid #FF4D6A' :
+                                                        borderLeft: (f.severity === 'high' || f.severity === 'RED') ? '3px solid #B45309' :
                                                             (f.severity === 'medium' || f.severity === 'ORANGE' || f.severity === 'YELLOW') ? '3px solid #FF9800' : '3px solid #ccc'
                                                     }}
                                                 >
@@ -282,7 +282,7 @@ export default function StudentTestResult() {
                                             {flags.length === 0 && (
                                                 <TableRow>
                                                     <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
-                                                        <CheckCircle sx={{ fontSize: 48, color: '#4ECDC4', mb: 1, opacity: 0.8 }} />
+                                                        <CheckCircle sx={{ fontSize: 48, color: '#0284C7', mb: 1, opacity: 0.8 }} />
                                                         <Typography variant="body2" color="text.secondary">
                                                             No flags recorded for this session.
                                                         </Typography>
@@ -313,7 +313,7 @@ export default function StudentTestResult() {
                                     const isCorrect = !isSkipped && JSON.stringify(userAnsArray.sort()) === JSON.stringify(correctArray.sort());
 
                                     return (
-                                        <Card key={q.id} sx={{ mb: 2, borderLeft: isCorrect ? '4px solid #4ECDC4' : isSkipped ? '4px solid #FFB74D' : '4px solid #FF4D6A' }}>
+                                        <Card key={q.id} sx={{ mb: 2, borderLeft: isCorrect ? '4px solid #0284C7' : isSkipped ? '4px solid #78350F' : '4px solid #B45309' }}>
                                             <CardContent>
                                                 <Box sx={{ display: 'flex', gap: 2 }}>
                                                     <Box sx={{ mt: 0.5 }}>
@@ -356,7 +356,7 @@ export default function StudentTestResult() {
                 </DialogTitle>
                 <DialogContent>
                     {/* Flag Details */}
-                    <Paper sx={{ p: 2, mb: 2, bgcolor: 'rgba(108,99,255,0.03)', borderRadius: 2 }}>
+                    <Paper sx={{ p: 2, mb: 2, bgcolor: 'rgba(217,119,6,0.03)', borderRadius: 2 }}>
                         <Grid container spacing={2}>
                             <Grid size={{ xs: 6 }}>
                                 <Typography variant="body2"><strong>Type:</strong> {selectedFlag?.type || selectedFlag?.flag_type}</Typography>
@@ -446,12 +446,12 @@ export default function StudentTestResult() {
             {/* AI Advisor Dialog */}
             <Dialog open={advisorOpen} onClose={() => setAdvisorOpen(false)} maxWidth="md" fullWidth>
                 <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <AutoAwesome sx={{ color: '#6C63FF' }} /> AI Study Advisor
+                    <AutoAwesome sx={{ color: '#D97706' }} /> AI Study Advisor
                 </DialogTitle>
                 <DialogContent dividers sx={{ minHeight: '300px' }}>
                     {advisorLoading ? (
                         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', mt: 4 }}>
-                            <CircularProgress sx={{ mb: 2, color: '#6C63FF' }} />
+                            <CircularProgress sx={{ mb: 2, color: '#D97706' }} />
                             <Typography>Analyzing your test performance...</Typography>
                         </Box>
                     ) : (

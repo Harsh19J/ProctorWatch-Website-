@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, cloneElement } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Box, Typography, Button, Container, Grid, Card, CardContent,
@@ -15,80 +15,125 @@ import {
 } from '@mui/icons-material';
 import { useThemeMode } from '../ThemeContext';
 
-import heroDashboard from '../assets/hero_dashboard.png';
+
 import analyticsImg from '../assets/analytics_dash.png';
 import liveMonitorImg from '../assets/live_monitor.png';
 import testCreationImg from '../assets/test_creation.png';
 import roleDashboards from '../assets/role_dashboards.png';
 
-// ─── Particle Canvas ──────────────────────────────────────────────────────────
-function ParticleCanvas({ isDark }) {
+// ─── Scroll Sequence Animation ────────────────────────────────────────────────
+function ScrollSequence({ children }) {
     const canvasRef = useRef(null);
+    const imagesRef = useRef([]);
+    const loadedRef = useRef(0);
+    const [loadProgress, setLoadProgress] = useState(0);
+    const [ready, setReady] = useState(false);
     const rafRef = useRef(null);
+    const lastFrameRef = useRef(-1);
 
+    // Phase 1: load frames eagerly, draw frame 0 as soon as it arrives
+    useEffect(() => {
+        const TOTAL = 200;
+        const imgs = new Array(TOTAL);
+        imagesRef.current = imgs;
+
+        for (let i = 0; i < TOTAL; i++) {
+            const img = new Image();
+            img.src = `/frames/ezgif-frame-${(i + 1).toString().padStart(3, '0')}.jpg`;
+            img.onload = () => {
+                imgs[i] = img;
+                loadedRef.current++;
+                setLoadProgress(Math.round((loadedRef.current / TOTAL) * 100));
+                // draw first frame immediately so canvas is never blank
+                if (i === 0) drawFrame(img);
+                if (loadedRef.current === TOTAL) setReady(true);
+            };
+        }
+    }, []);
+
+    const drawFrame = (img) => {
+        const canvas = canvasRef.current;
+        if (!canvas || !img) return;
+        const ctx = canvas.getContext('2d', { alpha: false });
+        const W = canvas.width;
+        const H = canvas.height;
+        const scale = Math.max(W / img.width, H / img.height);
+        const dx = (W - img.width * scale) / 2;
+        const dy = (H - img.height * scale) / 2;
+        ctx.fillStyle = '#2B231D';
+        ctx.fillRect(0, 0, W, H);
+        ctx.drawImage(img, 0, 0, img.width, img.height, dx, dy, img.width * scale, img.height * scale);
+    };
+
+    // Phase 2: wire scroll → frame scrubbing
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        let W = canvas.offsetWidth;
-        let H = canvas.offsetHeight;
-        canvas.width = W;
-        canvas.height = H;
 
-        const COLORS = ['#6C63FF', '#38BDF8', '#FF4D6A', '#4ECDC4', '#FFB74D'];
-        const COUNT = Math.floor((W * H) / 15000);
+        const handleScroll = () => {
+            // document height
+            const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+            const rawProgress = scrollable > 0 ? (window.scrollY / scrollable) : 0;
+            const progress = Math.max(0, Math.min(1, rawProgress));
+            const frameIndex = Math.min(199, Math.floor(progress * 200));
 
-        const particles = Array.from({ length: COUNT }, () => ({
-            x: Math.random() * W, y: Math.random() * H,
-            r: Math.random() * 1.8 + 0.4,
-            dx: (Math.random() - 0.5) * 0.35,
-            dy: (Math.random() - 0.5) * 0.35,
-            color: COLORS[Math.floor(Math.random() * COLORS.length)],
-            alpha: Math.random() * 0.45 + 0.1,
-        }));
+            if (frameIndex === lastFrameRef.current) return;
+            lastFrameRef.current = frameIndex;
 
-        const draw = () => {
-            ctx.clearRect(0, 0, W, H);
-            for (let i = 0; i < particles.length; i++) {
-                const p = particles[i];
-                for (let j = i + 1; j < particles.length; j++) {
-                    const q = particles[j];
-                    const dx = p.x - q.x; const dy = p.y - q.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < 110) {
-                        ctx.beginPath();
-                        ctx.strokeStyle = isDark
-                            ? `rgba(108,99,255,${(1 - dist / 110) * 0.1})`
-                            : `rgba(108,99,255,${(1 - dist / 110) * 0.06})`;
-                        ctx.lineWidth = 0.5;
-                        ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke();
-                    }
-                }
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-                ctx.fillStyle = p.color + Math.round(p.alpha * 255).toString(16).padStart(2, '0');
-                ctx.fill();
-                p.x += p.dx; p.y += p.dy;
-                if (p.x < 0 || p.x > W) p.dx *= -1;
-                if (p.y < 0 || p.y > H) p.dy *= -1;
-            }
-            rafRef.current = requestAnimationFrame(draw);
+            if (rafRef.current) cancelAnimationFrame(rafRef.current);
+            rafRef.current = requestAnimationFrame(() => {
+                drawFrame(imagesRef.current[frameIndex]);
+            });
         };
-        draw();
 
-        const onResize = () => {
-            W = canvas.offsetWidth; H = canvas.offsetHeight;
-            canvas.width = W; canvas.height = H;
+        const handleResize = () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            handleScroll();
         };
-        window.addEventListener('resize', onResize);
-        return () => { cancelAnimationFrame(rafRef.current); window.removeEventListener('resize', onResize); };
-    }, [isDark]);
+
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        window.addEventListener('resize', handleResize);
+        handleResize(); // set initial size + draw
+
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+            window.removeEventListener('resize', handleResize);
+            if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        };
+    }, []); // no deps — uses refs, not state
 
     return (
-        <Box component="canvas" ref={canvasRef} sx={{
-            position: 'absolute', inset: 0, width: '100%', height: '100%',
-            pointerEvents: 'none', zIndex: 0,
-        }} />
+        <Box id="scroll-container" sx={{ position: 'relative', width: '100%', minHeight: '100vh' }}>
+            {/* Loading bar — shown until all 200 frames are in memory */}
+            {!ready && (
+                <Box sx={{
+                    position: 'fixed', top: 0, left: 0, right: 0, height: 3, zIndex: 9999,
+                    background: 'rgba(43,35,29,0.4)',
+                }}>
+                    <Box sx={{
+                        height: '100%', background: 'linear-gradient(90deg, #D97706, #FBBF24)',
+                        width: `${loadProgress}%`, transition: 'width 0.2s ease',
+                    }} />
+                </Box>
+            )}
+            
+            {/* Fixed Background Canvas */}
+            <Box sx={{ position: 'fixed', top: 0, left: 0, height: '100vh', width: '100%', overflow: 'hidden', zIndex: 0 }}>
+                <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
+                {/* Gradient overlay to make text readable */}
+                <Box sx={{
+                    position: 'absolute', inset: 0,
+                    background: 'linear-gradient(to bottom, rgba(43,35,29,0.65) 0%, rgba(43,35,29,0.95) 100%)',
+                    pointerEvents: 'none',
+                }} />
+            </Box>
+            
+            {/* All page content overlays here */}
+            <Box sx={{ position: 'relative', zIndex: 1, width: '100%' }}>
+                {children}
+            </Box>
+        </Box>
     );
 }
 
@@ -169,22 +214,8 @@ function Reveal({ children, animation = 'fadeSlideUp', delay = 0, threshold = 0.
     );
 }
 
-// ─── Floating Orb ─────────────────────────────────────────────────────────────
-function Orb({ size, x, y, color, delay = 0 }) {
-    return (
-        <Box sx={{
-            position: 'absolute', width: size, height: size, left: x, top: y,
-            borderRadius: '50%',
-            background: `radial-gradient(circle, ${color}40 0%, transparent 70%)`,
-            animation: `floatOrb ${8 + delay}s ease-in-out infinite alternate`,
-            animationDelay: `${delay}s`, pointerEvents: 'none',
-            filter: 'blur(2px)',
-        }} />
-    );
-}
-
 // ─── Framed screenshot ────────────────────────────────────────────────────────
-function FramedImage({ src, alt, glowColor = '#6C63FF', floatAnim = false, reveal = true }) {
+function FramedImage({ src, alt, glowColor = '#D97706', floatAnim = false, reveal = true }) {
     const inner = (
         <Box sx={{ position: 'relative', width: '100%' }}>
             <Box sx={{
@@ -216,7 +247,7 @@ function FramedImage({ src, alt, glowColor = '#6C63FF', floatAnim = false, revea
                     display: 'flex', alignItems: 'center', gap: 1,
                     borderBottom: `1px solid ${glowColor}18`,
                 }}>
-                    {['#FF4D6A', '#FFB74D', '#4ECDC4'].map((c, i) => (
+                    {['#B45309', '#78350F', '#0284C7'].map((c, i) => (
                         <Box key={i} sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: c }} />
                     ))}
                     <Box sx={{ flex: 1, mx: 2, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '6px', height: 18 }} />
@@ -230,7 +261,7 @@ function FramedImage({ src, alt, glowColor = '#6C63FF', floatAnim = false, revea
 }
 
 // ─── Section header ───────────────────────────────────────────────────────────
-function SectionHeader({ chip, chipColor = '#6C63FF', title, highlight, after = '', subtitle }) {
+function SectionHeader({ chip, chipColor = '#D97706', title, highlight, after = '', subtitle }) {
     return (
         <Reveal animation="fadeSlideUp">
             <Box sx={{ textAlign: 'center', mb: 8 }}>
@@ -244,7 +275,7 @@ function SectionHeader({ chip, chipColor = '#6C63FF', title, highlight, after = 
                     {title}{' '}
                     {highlight && (
                         <Box component="span" sx={{
-                            background: `linear-gradient(90deg, ${chipColor}, #38BDF8, ${chipColor})`,
+                            background: `linear-gradient(90deg, ${chipColor}, #FBBF24, ${chipColor})`,
                             backgroundSize: '200% 200%',
                             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                             animation: 'gradientShift 3s ease infinite',
@@ -270,13 +301,13 @@ function TrustBadge({ icon, label }) {
         <Box sx={{
             display: 'flex', alignItems: 'center', gap: 1,
             px: 2, py: 0.75, borderRadius: '999px',
-            border: '1px solid rgba(108,99,255,0.2)',
-            bgcolor: 'rgba(108,99,255,0.06)',
+            border: '1px solid rgba(217,119,6,0.2)',
+            bgcolor: 'rgba(217,119,6,0.06)',
             transition: 'all 200ms ease',
-            '&:hover': { bgcolor: 'rgba(108,99,255,0.12)', transform: 'translateY(-2px)' },
+            '&:hover': { bgcolor: 'rgba(217,119,6,0.12)', transform: 'translateY(-2px)' },
             cursor: 'default',
         }}>
-            <Box sx={{ color: '#6C63FF', display: 'flex', fontSize: 16 }}>{icon}</Box>
+            <Box sx={{ color: '#D97706', display: 'flex', fontSize: 16 }}>{icon}</Box>
             <Typography variant="caption" fontWeight={600} sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
                 {label}
             </Typography>
@@ -286,46 +317,46 @@ function TrustBadge({ icon, label }) {
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 const FEATURES = [
-    { icon: <Shield fontSize="large" />, color: '#6C63FF', title: 'ArcFace Verification', desc: 'ResNet-50 with 512D embeddings and MiniFASNet liveness detection ensures only the right student takes the exam.', tag: 'AI · Biometric' },
-    { icon: <Psychology fontSize="large" />, color: '#38BDF8', title: 'Audio Intelligence', desc: 'Silero VAD + FFT spectral analysis detects nearby speech with ambient noise calibration and lip-sync correlation.', tag: 'AI · Acoustic' },
-    { icon: <MonitorHeart fontSize="large" />, color: '#FF4D6A', title: 'Real-Time Monitoring', desc: 'Invigilators see live webcam feeds, flag counts, and active session status — intervene with a single click.', tag: 'Live · Dashboard' },
-    { icon: <Group fontSize="large" />, color: '#4ECDC4', title: 'Multi-Role Dashboards', desc: 'Tailored views for Students, Teachers, Admins, Parents and Technical staff with role-scoped permissions.', tag: '5 Roles' },
-    { icon: <BarChart fontSize="large" />, color: '#FFB74D', title: 'Deep Analytics', desc: 'Score distributions, flag breakdowns by module, performance trends and CSV export powered by Recharts.', tag: 'Reports' },
+    { icon: <Shield fontSize="large" />, color: '#D97706', title: 'ArcFace Verification', desc: 'ResNet-50 with 512D embeddings and MiniFASNet liveness detection ensures only the right student takes the exam.', tag: 'AI · Biometric' },
+    { icon: <Psychology fontSize="large" />, color: '#FBBF24', title: 'Audio Intelligence', desc: 'Silero VAD + FFT spectral analysis detects nearby speech with ambient noise calibration and lip-sync correlation.', tag: 'AI · Acoustic' },
+    { icon: <MonitorHeart fontSize="large" />, color: '#B45309', title: 'Real-Time Monitoring', desc: 'Invigilators see live webcam feeds, flag counts, and active session status — intervene with a single click.', tag: 'Live · Dashboard' },
+    { icon: <Group fontSize="large" />, color: '#0284C7', title: 'Multi-Role Dashboards', desc: 'Tailored views for Students, Teachers, Admins, Parents and Technical staff with role-scoped permissions.', tag: '5 Roles' },
+    { icon: <BarChart fontSize="large" />, color: '#78350F', title: 'Deep Analytics', desc: 'Score distributions, flag breakdowns by module, performance trends and CSV export powered by Recharts.', tag: 'Reports' },
     { icon: <VideoLibrary fontSize="large" />, color: '#F97316', title: 'Evidence Capture', desc: 'Circular buffer captures 30-second clips on every flag. Teachers and admins review evidence with full audit logs.', tag: 'Video · Audit' },
 ];
 
 const ROLES = [
-    { label: 'Student', icon: <School />, color: '#6C63FF', desc: 'View upcoming exams, check scores, track performance, and access your calendar — all from the browser.', bullets: ['Upcoming exam schedule', 'Score & performance history', 'Exam result breakdowns', 'Personal calendar view'] },
-    { label: 'Teacher', icon: <Verified />, color: '#38BDF8', desc: 'Create and manage tests with AI-generated questions, review proctoring flags, grade exams, and manage courses.', bullets: ['AI-powered test creation', 'Flag review + evidence video', 'Grading & score overrides', 'Course enrollment management'] },
-    { label: 'Admin', icon: <AdminPanelSettings />, color: '#FF4D6A', desc: 'Full platform oversight — manage all users, courses, analytics reports, and configure the application blacklist.', bullets: ['User CRUD + bulk CSV upload', 'Institution-wide analytics', 'Application blacklist config', 'Audit log access'] },
-    { label: 'Parent', icon: <FamilyRestroom />, color: '#4ECDC4', desc: "Monitor your child's academic progress — upcoming exams, scores, integrity metrics, and teacher contacts.", bullets: ['Child performance dashboard', 'Upcoming exam schedule', 'Integrity & flag summary', 'Teacher contact info'] },
-    { label: 'Technical', icon: <Build />, color: '#FFB74D', desc: 'Database inspection, audit log review, and live system schema visualization for platform maintenance.', bullets: ['Audit trail review', 'Schema diagrams', 'Blacklist configuration', 'Emergency controls'] },
+    { label: 'Student', icon: <School />, color: '#D97706', desc: 'View upcoming exams, check scores, track performance, and access your calendar — all from the browser.', bullets: ['Upcoming exam schedule', 'Score & performance history', 'Exam result breakdowns', 'Personal calendar view'], img: analyticsImg },
+    { label: 'Teacher', icon: <Verified />, color: '#FBBF24', desc: 'Create and manage tests with AI-generated questions, review proctoring flags, grade exams, and manage courses.', bullets: ['AI-powered test creation', 'Flag review + evidence video', 'Grading & score overrides', 'Course enrollment management'], img: testCreationImg },
+    { label: 'Admin', icon: <AdminPanelSettings />, color: '#B45309', desc: 'Full platform oversight — manage all users, courses, analytics reports, and configure the application blacklist.', bullets: ['User CRUD + bulk CSV upload', 'Institution-wide analytics', 'Application blacklist config', 'Audit log access'], img: liveMonitorImg },
+    { label: 'Parent', icon: <FamilyRestroom />, color: '#0284C7', desc: "Monitor your child's academic progress — upcoming exams, scores, integrity metrics, and teacher contacts.", bullets: ['Child performance dashboard', 'Upcoming exam schedule', 'Integrity & flag summary', 'Teacher contact info'], img: analyticsImg },
+    { label: 'Technical', icon: <Build />, color: '#78350F', desc: 'Database inspection, audit log review, and live system schema visualization for platform maintenance.', bullets: ['Audit trail review', 'Schema diagrams', 'Blacklist configuration', 'Emergency controls'], img: liveMonitorImg },
 ];
 
 const PRICING = [
-    { title: 'Starter', price: 'Free', period: '', color: '#6C63FF', features: ['Up to 50 students', '2 teacher accounts', 'Basic analytics', 'Email support'], cta: 'Get Started' },
-    { title: 'Institution', price: '₹XXXXX', period: '/month', color: '#38BDF8', features: ['Unlimited students', 'Unlimited teachers', 'Advanced analytics + CSV', 'Priority support', 'Custom branding'], cta: 'Contact Sales', popular: true },
-    { title: 'Enterprise', price: 'Custom', period: '', color: '#4ECDC4', features: ['Multi-institution', 'Dedicated support', 'Custom integrations', 'SLA guarantee', 'On-premise option'], cta: 'Talk to Us' },
+    { title: 'Starter', price: 'Free', period: '', color: '#D97706', features: ['Up to 50 students', '2 teacher accounts', 'Basic analytics', 'Email support'], cta: 'Get Started' },
+    { title: 'Institution', price: '₹XXXXX', period: '/month', color: '#FBBF24', features: ['Unlimited students', 'Unlimited teachers', 'Advanced analytics + CSV', 'Priority support', 'Custom branding'], cta: 'Contact Sales', popular: true },
+    { title: 'Enterprise', price: 'Custom', period: '', color: '#0284C7', features: ['Multi-institution', 'Dedicated support', 'Custom integrations', 'SLA guarantee', 'On-premise option'], cta: 'Talk to Us' },
 ];
 
 const HOW_STEPS = [
     {
-        step: '01', color: '#6C63FF', icon: <Computer sx={{ fontSize: 28 }} />, title: 'Install & Configure',
+        step: '01', color: '#D97706', icon: <Computer sx={{ fontSize: 28 }} />, title: 'Install & Configure',
         desc: 'Your institution admin downloads the ProctorWatch Windows app, creates user accounts in bulk via CSV, sets up courses, and configures the application blacklist.',
         bullets: ['One-click bulk user import via CSV', 'Course and enrollment setup', 'App blacklist configuration', 'Role assignment per user'],
-        img: liveMonitorImg, imgAlt: 'Admin dashboard setup', imgColor: '#6C63FF',
+        img: liveMonitorImg, imgAlt: 'Admin dashboard setup', imgColor: '#D97706',
     },
     {
-        step: '02', color: '#38BDF8', icon: <AutoAwesome sx={{ fontSize: 28 }} />, title: 'Create Tests with AI',
+        step: '02', color: '#FBBF24', icon: <AutoAwesome sx={{ fontSize: 28 }} />, title: 'Create Tests with AI',
         desc: 'Teachers build exams using a rich text editor with LaTeX/image support, or let the AI Question Generator auto-generate a complete question set from a topic prompt in seconds.',
         bullets: ['AI question generation from topic prompts', 'Rich text + code + image questions', 'Negative marking & randomization', 'Schedule exam windows per course'],
-        img: testCreationImg, imgAlt: 'Test creation interface', imgColor: '#38BDF8',
+        img: testCreationImg, imgAlt: 'Test creation interface', imgColor: '#FBBF24',
     },
     {
-        step: '03', color: '#4ECDC4', icon: <BarChart sx={{ fontSize: 28 }} />, title: 'Review Evidence & Analytics',
+        step: '03', color: '#0284C7', icon: <BarChart sx={{ fontSize: 28 }} />, title: 'Review Evidence & Analytics',
         desc: 'After exams, teachers and admins review AI-generated proctoring flags, watch 30-second evidence clips, and access rich analytics dashboards with score distributions.',
         bullets: ['Flag review with evidence video', 'Score override & grading tools', 'Institution-wide analytics', 'CSV export for reports'],
-        img: analyticsImg, imgAlt: 'Analytics dashboard', imgColor: '#4ECDC4',
+        img: analyticsImg, imgAlt: 'Analytics dashboard', imgColor: '#0284C7',
     },
 ];
 
@@ -359,8 +390,8 @@ export default function LandingPage() {
     const isDark = mode === 'dark';
     const bg = isDark ? '#09090F' : '#F8FAFF';
     const cardBg = isDark ? 'rgba(15,17,23,0.92)' : 'rgba(255,255,255,0.98)';
-    const border = isDark ? 'rgba(148,163,184,0.08)' : 'rgba(108,99,255,0.1)';
-    const sectionBg = isDark ? 'rgba(6,9,15,0.7)' : 'rgba(108,99,255,0.03)';
+    const border = isDark ? 'rgba(148,163,184,0.08)' : 'rgba(217,119,6,0.1)';
+    const sectionBg = isDark ? 'rgba(6,9,15,0.7)' : 'rgba(217,119,6,0.03)';
 
     const typedWord = useTypewriter([
         'Exam Integrity',
@@ -390,7 +421,7 @@ export default function LandingPage() {
     };
 
     return (
-        <Box sx={{ bgcolor: bg, minHeight: '100vh', color: 'text.primary', overflowX: 'hidden' }}>
+        <Box sx={{ bgcolor: 'transparent', minHeight: '100vh', color: 'text.primary', overflowX: 'hidden' }}>
 
             {/* ═══ DOWNLOAD MODAL ══════════════════════════════════════════════ */}
             <Modal open={downloadModal} onClose={() => setDownloadModal(false)}>
@@ -398,17 +429,17 @@ export default function LandingPage() {
                     position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
                     width: { xs: '92vw', sm: 480 }, borderRadius: 4,
                     bgcolor: isDark ? '#0F1117' : '#fff',
-                    border: `1px solid rgba(108,99,255,0.25)`,
+                    border: `1px solid rgba(217,119,6,0.25)`,
                     boxShadow: '0 32px 80px rgba(0,0,0,0.5)',
                     p: 5, textAlign: 'center',
                     animation: 'scaleIn 0.35s cubic-bezier(0.22,1,0.36,1) both',
                 }}>
                     <Box sx={{
                         width: 72, height: 72, borderRadius: '20px',
-                        background: 'linear-gradient(135deg, #6C63FF, #38BDF8)',
+                        background: 'linear-gradient(135deg, #D97706, #FBBF24)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         mx: 'auto', mb: 3,
-                        boxShadow: '0 12px 36px rgba(108,99,255,0.45)',
+                        boxShadow: '0 12px 36px rgba(217,119,6,0.45)',
                         animation: 'pulseRing 2.5s ease-in-out infinite',
                     }}>
                         <Computer sx={{ fontSize: 34, color: '#fff' }} />
@@ -431,9 +462,9 @@ export default function LandingPage() {
                         <Button
                             type="submit" variant="contained"
                             sx={{
-                                background: 'linear-gradient(135deg, #6C63FF, #38BDF8)',
+                                background: 'linear-gradient(135deg, #D97706, #FBBF24)',
                                 whiteSpace: 'nowrap', px: 3, borderRadius: '10px',
-                                boxShadow: '0 6px 18px rgba(108,99,255,0.4)',
+                                boxShadow: '0 6px 18px rgba(217,119,6,0.4)',
                             }}
                         >
                             Notify Me
@@ -449,6 +480,7 @@ export default function LandingPage() {
                 </Box>
             </Modal>
 
+            <ScrollSequence>
             {/* ═══ NAVBAR ══════════════════════════════════════════════════════ */}
             <Box component="nav" sx={{
                 position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1100,
@@ -458,7 +490,7 @@ export default function LandingPage() {
                     : 'transparent',
                 borderBottom: scrolled ? `1px solid ${border}` : '1px solid transparent',
                 transition: 'all 0.4s cubic-bezier(0.4,0,0.2,1)',
-                boxShadow: scrolled ? (isDark ? '0 4px 32px rgba(0,0,0,0.5)' : '0 4px 24px rgba(108,99,255,0.08)') : 'none',
+                boxShadow: scrolled ? (isDark ? '0 4px 32px rgba(0,0,0,0.5)' : '0 4px 24px rgba(217,119,6,0.08)') : 'none',
                 animation: 'navEntry 0.6s cubic-bezier(0.22,1,0.36,1) both',
             }}>
                 <Container maxWidth="xl">
@@ -470,9 +502,9 @@ export default function LandingPage() {
                         >
                             <Box sx={{
                                 width: 38, height: 38, borderRadius: '11px',
-                                background: 'linear-gradient(135deg, #6C63FF, #38BDF8)',
+                                background: 'linear-gradient(135deg, #D97706, #FBBF24)',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                boxShadow: '0 4px 16px rgba(108,99,255,0.45)',
+                                boxShadow: '0 4px 16px rgba(217,119,6,0.45)',
                                 animation: 'pulseRing 3s ease-in-out infinite',
                                 transition: 'transform 0.3s',
                                 '&:hover': { transform: 'rotate(12deg) scale(1.1)' },
@@ -480,7 +512,7 @@ export default function LandingPage() {
                                 <Shield sx={{ fontSize: 20, color: '#fff' }} />
                             </Box>
                             <Typography variant="h6" fontWeight={800} sx={{
-                                background: 'linear-gradient(90deg, #6C63FF, #38BDF8)',
+                                background: 'linear-gradient(90deg, #D97706, #FBBF24)',
                                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                                 letterSpacing: '-0.02em',
                             }}>
@@ -502,11 +534,11 @@ export default function LandingPage() {
                                             '&::after': {
                                                 content: '""', position: 'absolute',
                                                 bottom: 4, left: '50%', right: '50%',
-                                                height: '2px', bgcolor: '#6C63FF',
+                                                height: '2px', bgcolor: '#D97706',
                                                 borderRadius: 2,
                                                 transition: 'left 0.3s ease, right 0.3s ease',
                                             },
-                                            '&:hover': { color: '#6C63FF', bgcolor: 'transparent' },
+                                            '&:hover': { color: '#D97706', bgcolor: 'transparent' },
                                             '&:hover::after': { left: '10%', right: '10%' },
                                             transition: 'color 0.2s',
                                         }}
@@ -522,7 +554,7 @@ export default function LandingPage() {
                             <IconButton onClick={toggleMode} size="small" sx={{
                                 color: 'text.secondary',
                                 transition: 'transform 0.5s, color 0.2s',
-                                '&:hover': { transform: 'rotate(180deg)', color: '#FFB74D' },
+                                '&:hover': { transform: 'rotate(180deg)', color: '#78350F' },
                             }}>
                                 {isDark ? <LightMode sx={{ fontSize: 18 }} /> : <DarkMode sx={{ fontSize: 18 }} />}
                             </IconButton>
@@ -532,8 +564,8 @@ export default function LandingPage() {
                                         variant="outlined" size="small" startIcon={<Login sx={{ fontSize: 16 }} />}
                                         onClick={() => navigate('/login')}
                                         sx={{
-                                            borderColor: 'rgba(108,99,255,0.4)', color: '#6C63FF',
-                                            '&:hover': { borderColor: '#6C63FF', bgcolor: 'rgba(108,99,255,0.08)', transform: 'translateY(-2px)' },
+                                            borderColor: 'rgba(217,119,6,0.4)', color: '#D97706',
+                                            '&:hover': { borderColor: '#D97706', bgcolor: 'rgba(217,119,6,0.08)', transform: 'translateY(-2px)' },
                                             transition: 'all 0.2s',
                                         }}
                                     >
@@ -543,11 +575,11 @@ export default function LandingPage() {
                                         variant="contained" size="small" startIcon={<Download sx={{ fontSize: 16 }} />}
                                         onClick={() => setDownloadModal(true)}
                                         sx={{
-                                            background: 'linear-gradient(135deg, #6C63FF, #38BDF8)',
+                                            background: 'linear-gradient(135deg, #D97706, #FBBF24)',
                                             backgroundSize: '200% 200%',
                                             animation: 'gradientShift 3s ease infinite',
-                                            boxShadow: '0 4px 16px rgba(108,99,255,0.4)',
-                                            '&:hover': { boxShadow: '0 8px 28px rgba(108,99,255,0.7)', transform: 'translateY(-2px)' },
+                                            boxShadow: '0 4px 16px rgba(217,119,6,0.4)',
+                                            '&:hover': { boxShadow: '0 8px 28px rgba(217,119,6,0.7)', transform: 'translateY(-2px)' },
                                             transition: 'all 0.2s',
                                         }}
                                     >
@@ -576,11 +608,11 @@ export default function LandingPage() {
                         ))}
                         <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }}>
                             <Button fullWidth variant="outlined" onClick={() => navigate('/login')}
-                                sx={{ borderColor: '#6C63FF', color: '#6C63FF', borderRadius: '10px' }}>
+                                sx={{ borderColor: '#D97706', color: '#D97706', borderRadius: '10px' }}>
                                 Login
                             </Button>
                             <Button fullWidth variant="contained" onClick={() => setDownloadModal(true)}
-                                sx={{ background: 'linear-gradient(135deg, #6C63FF, #38BDF8)', borderRadius: '10px' }}>
+                                sx={{ background: 'linear-gradient(135deg, #D97706, #FBBF24)', borderRadius: '10px' }}>
                                 Download
                             </Button>
                         </Box>
@@ -588,28 +620,14 @@ export default function LandingPage() {
                 )}
             </Box>
 
-            {/* ═══ HERO ════════════════════════════════════════════════════════ */}
-            <Box id="home" sx={{ position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center', overflow: 'hidden', pt: 8 }}>
-                {/* BG layers */}
-                <Box sx={{
-                    position: 'absolute', inset: 0,
-                    background: isDark
-                        ? 'linear-gradient(135deg, #09090F 0%, #0D0F1A 50%, #09090F 100%)'
-                        : 'linear-gradient(135deg, #F8FAFF 0%, #EEF2FF 100%)',
-                }} />
-                {/* Grid */}
-                <Box sx={{
-                    position: 'absolute', inset: 0, opacity: isDark ? 0.025 : 0.04,
-                    backgroundImage: 'linear-gradient(rgba(108,99,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(108,99,255,1) 1px, transparent 1px)',
-                    backgroundSize: '60px 60px',
-                }} />
+                        {/* ═══ HERO ════════════════════════════════════════════════ */}
+                <Box id="home" sx={{ position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center', pt: 8, pointerEvents: 'none', '& *': { pointerEvents: 'auto' } }}>
 
-                <ParticleCanvas isDark={isDark} />
 
-                <Orb size={700} x="-15%" y="-5%" color="#6C63FF" delay={0} />
-                <Orb size={500} x="55%" y="35%" color="#38BDF8" delay={2} />
-                <Orb size={380} x="72%" y="-15%" color="#FF4D6A" delay={4} />
-                <Orb size={280} x="8%" y="60%" color="#4ECDC4" delay={1} />
+                
+                
+                
+                
 
                 <Container maxWidth="xl" sx={{ position: 'relative', zIndex: 1, py: { xs: 8, md: 4 } }}>
                     <Grid container spacing={6} alignItems="center">
@@ -617,10 +635,10 @@ export default function LandingPage() {
                             {/* Badge */}
                             <Box sx={{ animation: 'fadeSlideRight 0.65s cubic-bezier(0.22,1,0.36,1) 0.1s both' }}>
                                 <Chip
-                                    label="✦ AI Question Generation — Powered by Gemini"
+                                    label="AI Question Generation — Powered by Gemini"
                                     sx={{
-                                        mb: 3, bgcolor: 'rgba(108,99,255,0.1)', color: '#8B85FF',
-                                        fontWeight: 600, border: '1px solid rgba(108,99,255,0.25)',
+                                        mb: 3, bgcolor: 'rgba(217,119,6,0.1)', color: '#FDE68A',
+                                        fontWeight: 600, border: '1px solid rgba(217,119,6,0.25)',
                                         fontSize: '0.76rem', letterSpacing: '0.02em',
                                         animation: 'borderGlow 3s ease-in-out infinite',
                                     }}
@@ -636,7 +654,7 @@ export default function LandingPage() {
                                     <Box component="span" sx={{ color: 'text.primary' }}>AI-Powered</Box><br />
                                     {/* Typewriter */}
                                     <Box component="span" sx={{
-                                        background: 'linear-gradient(90deg, #6C63FF, #38BDF8, #FF4D6A)',
+                                        background: 'linear-gradient(90deg, #D97706, #FBBF24, #B45309)',
                                         backgroundSize: '200% 200%',
                                         WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                                         animation: 'gradientShift 4s ease infinite',
@@ -645,7 +663,7 @@ export default function LandingPage() {
                                         {typedWord}
                                         <Box component="span" sx={{
                                             display: 'inline-block', width: '3px', height: '0.85em',
-                                            bgcolor: '#6C63FF', ml: '2px', verticalAlign: 'middle',
+                                            bgcolor: '#D97706', ml: '2px', verticalAlign: 'middle',
                                             animation: 'blink 0.9s step-end infinite',
                                         }} />
                                     </Box><br />
@@ -666,12 +684,12 @@ export default function LandingPage() {
                                         variant="contained" size="large" endIcon={<ArrowForward />}
                                         onClick={() => navigate('/login')}
                                         sx={{
-                                            background: 'linear-gradient(135deg, #6C63FF, #8B85FF)',
+                                            background: 'linear-gradient(135deg, #D97706, #FDE68A)',
                                             backgroundSize: '200% 200%',
-                                            boxShadow: '0 8px 28px rgba(108,99,255,0.5)',
+                                            boxShadow: '0 8px 28px rgba(217,119,6,0.5)',
                                             px: 4, py: 1.5, fontSize: '0.95rem', fontWeight: 700,
                                             animation: 'gradientShift 3s ease infinite',
-                                            '&:hover': { boxShadow: '0 14px 40px rgba(108,99,255,0.72)', transform: 'translateY(-3px) scale(1.03)' },
+                                            '&:hover': { boxShadow: '0 14px 40px rgba(217,119,6,0.72)', transform: 'translateY(-3px) scale(1.03)' },
                                             transition: 'all 0.25s cubic-bezier(0.4,0,0.2,1)',
                                         }}
                                     >
@@ -683,7 +701,7 @@ export default function LandingPage() {
                                         sx={{
                                             borderColor: 'rgba(148,163,184,0.4)', color: 'text.primary',
                                             px: 4, py: 1.5, fontSize: '0.95rem',
-                                            '&:hover': { borderColor: '#6C63FF', bgcolor: 'rgba(108,99,255,0.06)', transform: 'translateY(-3px)' },
+                                            '&:hover': { borderColor: '#D97706', bgcolor: 'rgba(217,119,6,0.06)', transform: 'translateY(-3px)' },
                                             transition: 'all 0.25s',
                                         }}
                                     >
@@ -707,14 +725,14 @@ export default function LandingPage() {
                                     {STATS.map(({ val, suffix, label }) => (
                                         <Box key={label} sx={{
                                             p: 2, borderRadius: 2,
-                                            bgcolor: isDark ? 'rgba(108,99,255,0.06)' : 'rgba(108,99,255,0.05)',
-                                            border: '1px solid rgba(108,99,255,0.14)',
+                                            bgcolor: isDark ? 'rgba(217,119,6,0.06)' : 'rgba(217,119,6,0.05)',
+                                            border: '1px solid rgba(217,119,6,0.14)',
                                             transition: 'all 0.2s',
-                                            '&:hover': { transform: 'translateY(-4px)', borderColor: 'rgba(108,99,255,0.35)' },
+                                            '&:hover': { transform: 'translateY(-4px)', borderColor: 'rgba(217,119,6,0.35)' },
                                             cursor: 'default',
                                         }}>
                                             <Typography variant="h5" fontWeight={900} sx={{
-                                                background: 'linear-gradient(90deg, #6C63FF, #38BDF8)',
+                                                background: 'linear-gradient(90deg, #D97706, #FBBF24)',
                                                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', lineHeight: 1,
                                             }}>
                                                 <AnimatedCounter target={val} suffix={suffix} />
@@ -726,12 +744,6 @@ export default function LandingPage() {
                             </Box>
                         </Grid>
 
-                        {/* Hero image */}
-                        <Grid item xs={12} md={7}>
-                            <Box sx={{ animation: 'fadeSlideLeft 0.75s cubic-bezier(0.22,1,0.36,1) 0.3s both' }}>
-                                <FramedImage src={heroDashboard} alt="ProctorWatch Dashboard" glowColor="#6C63FF" floatAnim reveal={false} />
-                            </Box>
-                        </Grid>
                     </Grid>
                 </Container>
 
@@ -746,60 +758,66 @@ export default function LandingPage() {
                     </Typography>
                     <Box sx={{
                         width: 24, height: 38, borderRadius: 12,
-                        border: '2px solid rgba(108,99,255,0.4)',
+                        border: '2px solid rgba(217,119,6,0.4)',
                         display: 'flex', justifyContent: 'center', pt: 0.8,
                         animation: 'borderGlow 2s ease-in-out infinite',
                     }}>
-                        <Box sx={{ width: 4, height: 8, bgcolor: '#6C63FF', borderRadius: 2, animation: 'floatOrb 1.2s ease-in-out infinite alternate' }} />
+                        <Box sx={{ width: 4, height: 8, bgcolor: '#D97706', borderRadius: 2, animation: 'floatOrb 1.2s ease-in-out infinite alternate' }} />
                     </Box>
                 </Box>
-            </Box>
+                </Box>
 
             {/* ═══ FEATURES ════════════════════════════════════════════════════ */}
             <Box id="features" sx={{ py: 14 }}>
                 <Container maxWidth="xl">
-                    <SectionHeader chip="Core Features" chipColor="#6C63FF" title="Everything You Need for " highlight="Secure Exams" subtitle="A full suite of AI-driven tools designed for modern educational institutions — from biometric verification to deep analytics." />
+                    <SectionHeader chip="Core Features" chipColor="#D97706" title="Everything You Need for " highlight="Secure Exams" subtitle="A full suite of AI-driven tools designed for modern educational institutions — from biometric verification to deep analytics." />
 
-                    <Grid container spacing={3}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center' }}>
                         {FEATURES.map((f, i) => (
-                            <Grid item xs={12} sm={6} md={4} key={i}>
-                                <Reveal animation="scaleIn" delay={i * 0.07}>
+                            <Box key={i} sx={{ width: '100%', maxWidth: 860 }}>
+                                <Reveal animation="flipIn" delay={0.15}>
                                     <Card sx={{
-                                        bgcolor: cardBg, border: `1px solid ${border}`, borderRadius: 3,
-                                        height: '100%', p: 0.5, cursor: 'default',
-                                        transition: 'all 0.32s cubic-bezier(0.4,0,0.2,1)',
+                                        bgcolor: isDark ? 'rgba(15,17,23,0.55)' : 'rgba(255,255,255,0.7)',
+                                        backdropFilter: 'blur(16px)',
+                                        border: `1px solid ${border}`, borderRadius: 4,
+                                        p: 1, cursor: 'default',
+                                        transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
                                         '&:hover': {
-                                            transform: 'translateY(-10px) scale(1.02)',
+                                            transform: 'translateY(-8px) scale(1.02) rotateX(2deg)',
                                             borderColor: `${f.color}55`,
-                                            boxShadow: `0 28px 64px ${f.color}20`,
+                                            boxShadow: `0 32px 64px ${f.color}25`,
+                                            bgcolor: isDark ? 'rgba(15,17,23,0.75)' : 'rgba(255,255,255,0.9)',
                                         },
                                     }}>
-                                        <CardContent sx={{ p: 3.5 }}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2.5 }}>
+                                        <CardContent sx={{ p: { xs: 3, md: 4 }, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: { xs: 'flex-start', md: 'center' }, gap: 4 }}>
+                                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: { xs: 'flex-start', md: 'center' }, gap: 2, minWidth: { md: 140 } }}>
                                                 <Box sx={{
-                                                    width: 56, height: 56, borderRadius: '14px',
-                                                    bgcolor: `${f.color}12`, border: `1px solid ${f.color}30`,
+                                                    width: 64, height: 64, borderRadius: '16px',
+                                                    bgcolor: `${f.color}15`, border: `1px solid ${f.color}35`,
                                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                     color: f.color,
                                                     transition: 'transform 0.3s, box-shadow 0.3s',
-                                                    '&:hover': { transform: 'rotate(10deg) scale(1.12)', boxShadow: `0 8px 24px ${f.color}35` },
+                                                    '&:hover': { transform: 'rotate(10deg) scale(1.15)', boxShadow: `0 12px 28px ${f.color}40` },
                                                 }}>
-                                                    {f.icon}
+                                                    {/* cloneElement to make icon larger */}
+                                                    {cloneElement(f.icon, { sx: { fontSize: 32 } })}
                                                 </Box>
                                                 <Chip label={f.tag} size="small" sx={{
                                                     bgcolor: `${f.color}0D`, color: f.color,
-                                                    fontSize: '0.68rem', fontWeight: 700,
+                                                    fontSize: '0.7rem', fontWeight: 700,
                                                     border: `1px solid ${f.color}20`,
                                                 }} />
                                             </Box>
-                                            <Typography variant="h6" fontWeight={700} sx={{ mb: 1, letterSpacing: '-0.01em' }}>{f.title}</Typography>
-                                            <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.78 }}>{f.desc}</Typography>
+                                            <Box sx={{ flex: 1 }}>
+                                                <Typography variant="h5" fontWeight={800} sx={{ mb: 1.5, letterSpacing: '-0.02em' }}>{f.title}</Typography>
+                                                <Typography variant="body1" color="text.secondary" sx={{ lineHeight: 1.8, fontSize: '1.05rem' }}>{f.desc}</Typography>
+                                            </Box>
                                         </CardContent>
                                     </Card>
                                 </Reveal>
-                            </Grid>
+                            </Box>
                         ))}
-                    </Grid>
+                    </Box>
                 </Container>
             </Box>
 
@@ -807,8 +825,8 @@ export default function LandingPage() {
             <Box sx={{
                 py: 10,
                 background: isDark
-                    ? 'linear-gradient(135deg, rgba(108,99,255,0.12) 0%, rgba(56,189,248,0.08) 50%, rgba(108,99,255,0.06) 100%)'
-                    : 'linear-gradient(135deg, rgba(108,99,255,0.07) 0%, rgba(56,189,248,0.05) 100%)',
+                    ? 'linear-gradient(135deg, rgba(217,119,6,0.12) 0%, rgba(56,189,248,0.08) 50%, rgba(217,119,6,0.06) 100%)'
+                    : 'linear-gradient(135deg, rgba(217,119,6,0.07) 0%, rgba(56,189,248,0.05) 100%)',
                 borderTop: `1px solid ${border}`, borderBottom: `1px solid ${border}`,
             }}>
                 <Container maxWidth="lg">
@@ -820,7 +838,7 @@ export default function LandingPage() {
                                 <Typography variant="h3" fontWeight={900} sx={{ mb: 2.5, letterSpacing: '-0.03em', lineHeight: 1.1 }}>
                                     Start Proctoring{' '}
                                     <Box component="span" sx={{
-                                        background: 'linear-gradient(90deg, #6C63FF, #38BDF8)',
+                                        background: 'linear-gradient(90deg, #D97706, #FBBF24)',
                                         WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                                     }}>
                                         in Minutes
@@ -847,8 +865,8 @@ export default function LandingPage() {
                                         variant="outlined" size="large"
                                         href="#features"
                                         sx={{
-                                            borderColor: 'rgba(108,99,255,0.35)', color: '#6C63FF', px: 4, py: 1.5, fontWeight: 600,
-                                            '&:hover': { borderColor: '#6C63FF', bgcolor: 'rgba(108,99,255,0.06)' },
+                                            borderColor: 'rgba(217,119,6,0.35)', color: '#D97706', px: 4, py: 1.5, fontWeight: 600,
+                                            '&:hover': { borderColor: '#D97706', bgcolor: 'rgba(217,119,6,0.06)' },
                                         }}
                                     >
                                         System Requirements
@@ -859,9 +877,9 @@ export default function LandingPage() {
                             {/* Right — spec cards */}
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: { md: 280 } }}>
                                 {[
-                                    { icon: <Computer />, color: '#6C63FF', title: 'Windows 10 / 11', sub: '64-bit required' },
-                                    { icon: <Speed />, color: '#38BDF8', title: '4 GB RAM min', sub: '8 GB recommended' },
-                                    { icon: <Lock />, color: '#4ECDC4', title: 'Admin Privileges', sub: 'For process control' },
+                                    { icon: <Computer />, color: '#D97706', title: 'Windows 10 / 11', sub: '64-bit required' },
+                                    { icon: <Speed />, color: '#FBBF24', title: '4 GB RAM min', sub: '8 GB recommended' },
+                                    { icon: <Lock />, color: '#0284C7', title: 'Admin Privileges', sub: 'For process control' },
                                 ].map((spec, i) => (
                                     <Box key={i} sx={{
                                         display: 'flex', alignItems: 'center', gap: 2,
@@ -890,12 +908,12 @@ export default function LandingPage() {
             {/* ═══ HOW IT WORKS ════════════════════════════════════════════════ */}
             <Box id="how-it-works" sx={{ py: 14 }}>
                 <Container maxWidth="xl">
-                    <SectionHeader chip="Workflow" chipColor="#38BDF8" title="How " highlight="ProctorWatch" after=" Works" subtitle="From first setup to post-exam review — three simple stages, each powered by AI." />
+                    <SectionHeader chip="Workflow" chipColor="#FBBF24" title="How " highlight="ProctorWatch" after=" Works" subtitle="From first setup to post-exam review — three simple stages, each powered by AI." />
 
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                         {HOW_STEPS.map((step, i) => (
                             <Grid container spacing={7} key={i} alignItems="center" direction={i % 2 === 1 ? 'row-reverse' : 'row'}>
-                                <Grid item xs={12} md={5}>
+                                <Grid item xs={12} md={4} sx={{ maxWidth: { xs: 600, md: 'none' }, mx: 'auto' }}>
                                     <Reveal animation={i % 2 === 0 ? 'fadeSlideRight' : 'fadeSlideLeft'} delay={0.1}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
                                             <Box sx={{
@@ -939,7 +957,7 @@ export default function LandingPage() {
                                         </Box>
                                     </Reveal>
                                 </Grid>
-                                <Grid item xs={12} md={7}>
+                                <Grid item xs={12} md={8}>
                                     <FramedImage src={step.img} alt={step.imgAlt} glowColor={step.imgColor} />
                                 </Grid>
                             </Grid>
@@ -951,46 +969,49 @@ export default function LandingPage() {
             {/* ═══ ROLE DASHBOARDS ════════════════════════════════════════════ */}
             <Box id="dashboards" sx={{ py: 14, bgcolor: sectionBg, borderTop: `1px solid ${border}`, borderBottom: `1px solid ${border}` }}>
                 <Container maxWidth="xl">
-                    <SectionHeader chip="Dashboards" chipColor="#4ECDC4" title="Built for " highlight="Every Role" subtitle="Each user gets a tailored interface with exactly the tools they need — no more, no less." />
+                    <SectionHeader chip="Dashboards" chipColor="#0284C7" title="Built for " highlight="Every Role" subtitle="Each user gets a tailored interface with exactly the tools they need — no more, no less." />
 
-                    <Grid container spacing={4}>
+                    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: { xs: 4, md: 6 }, alignItems: 'flex-start' }}>
                         {/* Role tab list */}
-                        <Grid item xs={12} md={3}>
+                        <Box sx={{ width: { xs: '100%', md: '280px' }, flexShrink: 0 }}>
                             <Reveal animation="fadeSlideRight" delay={0.1}>
-                                <Box sx={{ display: 'flex', flexDirection: { xs: 'row', md: 'column' }, gap: 1, flexWrap: 'wrap' }}>
+                                <Box sx={{ display: 'flex', flexDirection: { xs: 'row', md: 'column' }, gap: 1.5, flexWrap: 'wrap' }}>
                                     {ROLES.map((role, i) => (
                                         <Box key={i} onClick={() => setRoleTab(i)} sx={{
-                                            p: { xs: 1.5, md: 2 }, borderRadius: '12px', cursor: 'pointer',
-                                            display: 'flex', alignItems: 'center', gap: 1.5,
-                                            bgcolor: roleTab === i ? `${role.color}12` : 'transparent',
-                                            border: `1px solid ${roleTab === i ? role.color + '50' : border}`,
-                                            transition: 'all 0.25s cubic-bezier(0.4,0,0.2,1)',
-                                            '&:hover': { bgcolor: `${role.color}0A`, transform: 'translateX(3px)' },
-                                            transform: roleTab === i ? 'translateX(5px)' : 'none',
+                                            p: { xs: 1.5, md: 2.5 }, borderRadius: '14px', cursor: 'pointer',
+                                            display: 'flex', alignItems: 'center', gap: 2,
+                                            bgcolor: roleTab === i ? `${role.color}18` : isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
+                                            backdropFilter: 'blur(12px)',
+                                            border: `1px solid ${roleTab === i ? role.color + '60' : border}`,
+                                            transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                                            '&:hover': { bgcolor: `${role.color}1A`, transform: 'translateX(6px)' },
+                                            transform: roleTab === i ? 'translateX(8px)' : 'none',
+                                            boxShadow: roleTab === i ? `0 12px 32px ${role.color}20` : 'none',
                                         }}>
-                                            <Box sx={{ color: role.color, display: 'flex' }}>{role.icon}</Box>
-                                            <Typography fontWeight={roleTab === i ? 700 : 500} sx={{ display: { xs: 'none', md: 'block' }, fontSize: '0.9rem' }}>
+                                            <Box sx={{ color: role.color, display: 'flex', transform: roleTab === i ? 'scale(1.1)' : 'scale(1)', transition: 'transform 0.3s' }}>{role.icon}</Box>
+                                            <Typography fontWeight={roleTab === i ? 800 : 500} sx={{ display: { xs: 'none', md: 'block' }, fontSize: '1rem', color: roleTab === i ? 'text.primary' : 'text.secondary' }}>
                                                 {role.label}
                                             </Typography>
                                             {roleTab === i && (
-                                                <ArrowForward sx={{ ml: 'auto', fontSize: 16, color: role.color, display: { xs: 'none', md: 'flex' } }} />
+                                                <ArrowForward sx={{ ml: 'auto', fontSize: 18, color: role.color, display: { xs: 'none', md: 'flex' } }} />
                                             )}
                                         </Box>
                                     ))}
                                 </Box>
                             </Reveal>
-                        </Grid>
+                        </Box>
 
                         {/* Role content */}
-                        <Grid item xs={12} md={9}>
+                        <Box sx={{ flex: 1, minWidth: 0, width: '100%' }}>
                             {ROLES[roleTab] && (() => {
                                 const role = ROLES[roleTab];
                                 return (
-                                    <Box sx={{ animation: 'scaleIn 0.32s cubic-bezier(0.22,1,0.36,1) both' }} key={roleTab}>
+                                    <Box sx={{ animation: 'scaleIn 0.32s cubic-bezier(0.22,1,0.36,1) both', width: '100%' }} key={roleTab}>
                                         <Card sx={{
                                             bgcolor: cardBg,
                                             border: `1px solid ${role.color}30`,
                                             borderRadius: 3, overflow: 'hidden',
+                                            width: '100%'
                                         }}>
                                             {/* Top gradient bar */}
                                             <Box sx={{
@@ -999,9 +1020,9 @@ export default function LandingPage() {
                                                 backgroundSize: '200% 100%',
                                                 animation: 'gradientShift 2s ease infinite',
                                             }} />
-                                            <CardContent sx={{ p: 4 }}>
-                                                <Grid container spacing={4} alignItems="flex-start">
-                                                    <Grid item xs={12} md={5}>
+                                            <CardContent sx={{ p: { xs: 3, md: 5 } }}>
+                                                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: { xs: 4, lg: 6 }, alignItems: 'center' }}>
+                                                    <Box sx={{ flex: 1, minWidth: 0 }}>
                                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2.5 }}>
                                                             <Box sx={{
                                                                 color: role.color, p: 1.5,
@@ -1037,18 +1058,18 @@ export default function LandingPage() {
                                                         >
                                                             Access {role.label} Portal
                                                         </Button>
-                                                    </Grid>
-                                                    <Grid item xs={12} md={7}>
-                                                        <FramedImage src={roleDashboards} alt={`${role.label} dashboard preview`} glowColor={role.color} reveal={false} />
-                                                    </Grid>
-                                                </Grid>
+                                                    </Box>
+                                                    <Box sx={{ flex: 1.4, minWidth: 0, width: '100%' }}>
+                                                        <FramedImage src={role.img} alt={`${role.label} dashboard preview`} glowColor={role.color} reveal={false} />
+                                                    </Box>
+                                                </Box>
                                             </CardContent>
                                         </Card>
                                     </Box>
                                 );
                             })()}
-                        </Grid>
-                    </Grid>
+                        </Box>
+                    </Box>
                 </Container>
             </Box>
 
@@ -1059,7 +1080,7 @@ export default function LandingPage() {
                     <Box sx={{ display: 'flex', justifyContent: 'center', mb: 8 }}>
                         <Box sx={{
                             display: 'inline-flex',
-                            bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(108,99,255,0.05)',
+                            bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(217,119,6,0.05)',
                             border: `1px solid ${border}`, borderRadius: '14px', p: 0.75, gap: 0.75,
                         }}>
                             {['Pricing', 'Contact Us'].map((label, i) => (
@@ -1067,9 +1088,9 @@ export default function LandingPage() {
                                     variant={pageTab === i ? 'contained' : 'text'}
                                     sx={{
                                         borderRadius: '10px', px: 3, py: 1, fontWeight: 700, fontSize: '0.88rem',
-                                        background: pageTab === i ? 'linear-gradient(135deg, #6C63FF, #38BDF8)' : 'transparent',
+                                        background: pageTab === i ? 'linear-gradient(135deg, #D97706, #FBBF24)' : 'transparent',
                                         color: pageTab === i ? '#fff' : 'text.secondary',
-                                        boxShadow: pageTab === i ? '0 4px 14px rgba(108,99,255,0.4)' : 'none',
+                                        boxShadow: pageTab === i ? '0 4px 14px rgba(217,119,6,0.4)' : 'none',
                                         transition: 'all 0.22s ease',
                                     }}>
                                     {label}
@@ -1080,7 +1101,7 @@ export default function LandingPage() {
 
                     {pageTab === 0 && (
                         <Box sx={{ animation: 'fadeSlideUp 0.45s cubic-bezier(0.22,1,0.36,1) both' }}>
-                            <SectionHeader chip="Pricing" chipColor="#FFB74D" title="Simple, " highlight="Transparent" after=" Pricing" subtitle="Choose the plan that fits your institution — no hidden fees." />
+                            <SectionHeader chip="Pricing" chipColor="#78350F" title="Simple, " highlight="Transparent" after=" Pricing" subtitle="Choose the plan that fits your institution — no hidden fees." />
                             <Grid container spacing={3} justifyContent="center" alignItems="stretch">
                                 {PRICING.map((plan, i) => (
                                     <Grid item xs={12} md={4} key={i}>
@@ -1147,15 +1168,15 @@ export default function LandingPage() {
 
                     {pageTab === 1 && (
                         <Box sx={{ animation: 'fadeSlideUp 0.45s cubic-bezier(0.22,1,0.36,1) both' }}>
-                            <SectionHeader chip="Contact" chipColor="#FF4D6A" title="Let's " highlight="Talk" subtitle="Have questions about ProctorWatch? Our team is here to help." />
+                            <SectionHeader chip="Contact" chipColor="#B45309" title="Let's " highlight="Talk" subtitle="Have questions about ProctorWatch? Our team is here to help." />
                             <Grid container spacing={5} alignItems="flex-start">
                                 <Grid item xs={12} md={4}>
                                     <Reveal animation="fadeSlideRight" delay={0.1}>
                                         <Typography variant="h6" fontWeight={700} sx={{ mb: 3 }}>Get in Touch</Typography>
                                         {[
-                                            { icon: <Email />, color: '#6C63FF', label: 'Email', value: 'contact@proctorwatch.com' },
-                                            { icon: <Phone />, color: '#38BDF8', label: 'Phone', value: '+XX XXXXX XXXXX' },
-                                            { icon: <LocationOn />, color: '#FF4D6A', label: 'Address', value: 'XXXXX, XXXXX, India' },
+                                            { icon: <Email />, color: '#D97706', label: 'Email', value: 'contact@proctorwatch.com' },
+                                            { icon: <Phone />, color: '#FBBF24', label: 'Phone', value: '+XX XXXXX XXXXX' },
+                                            { icon: <LocationOn />, color: '#B45309', label: 'Address', value: 'XXXXX, XXXXX, India' },
                                         ].map((item, i) => (
                                             <Box key={i} sx={{
                                                 display: 'flex', alignItems: 'flex-start', gap: 2, mb: 3,
@@ -1176,9 +1197,9 @@ export default function LandingPage() {
                                             <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }}>
                                                 {[<Twitter />, <LinkedIn />, <GitHub />].map((icon, i) => (
                                                     <IconButton key={i} size="small" sx={{
-                                                        bgcolor: 'rgba(108,99,255,0.08)', border: '1px solid rgba(108,99,255,0.18)',
-                                                        color: '#8B85FF', transition: 'all 0.2s',
-                                                        '&:hover': { bgcolor: 'rgba(108,99,255,0.22)', transform: 'translateY(-4px) rotate(5deg)', boxShadow: '0 6px 16px rgba(108,99,255,0.3)' },
+                                                        bgcolor: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.18)',
+                                                        color: '#FDE68A', transition: 'all 0.2s',
+                                                        '&:hover': { bgcolor: 'rgba(217,119,6,0.22)', transform: 'translateY(-4px) rotate(5deg)', boxShadow: '0 6px 16px rgba(217,119,6,0.3)' },
                                                     }}>
                                                         {icon}
                                                     </IconButton>
@@ -1196,11 +1217,11 @@ export default function LandingPage() {
                                                     <Box sx={{ textAlign: 'center', py: 6, animation: 'scaleIn 0.4s cubic-bezier(0.22,1,0.36,1) both' }}>
                                                         <Box sx={{
                                                             width: 80, height: 80, borderRadius: '50%',
-                                                            bgcolor: 'rgba(78,205,196,0.12)', border: '2px solid #4ECDC4',
+                                                            bgcolor: 'rgba(78,205,196,0.12)', border: '2px solid #0284C7',
                                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                             mx: 'auto', mb: 3, animation: 'pulseRing 2s ease-in-out infinite',
                                                         }}>
-                                                            <CheckCircle sx={{ fontSize: 40, color: '#4ECDC4' }} />
+                                                            <CheckCircle sx={{ fontSize: 40, color: '#0284C7' }} />
                                                         </Box>
                                                         <Typography variant="h5" fontWeight={800} sx={{ mb: 1 }}>Message Sent!</Typography>
                                                         <Typography color="text.secondary">We'll get back to you within 24–48 hours.</Typography>
@@ -1221,10 +1242,10 @@ export default function LandingPage() {
                                                         <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                                                             <Button type="submit" variant="contained" size="large" endIcon={<Send />}
                                                                 sx={{
-                                                                    background: 'linear-gradient(135deg, #6C63FF, #38BDF8)',
-                                                                    boxShadow: '0 8px 20px rgba(108,99,255,0.4)',
+                                                                    background: 'linear-gradient(135deg, #D97706, #FBBF24)',
+                                                                    boxShadow: '0 8px 20px rgba(217,119,6,0.4)',
                                                                     px: 5, py: 1.5, fontWeight: 700,
-                                                                    '&:hover': { boxShadow: '0 14px 32px rgba(108,99,255,0.65)', transform: 'translateY(-2px)' },
+                                                                    '&:hover': { boxShadow: '0 14px 32px rgba(217,119,6,0.65)', transform: 'translateY(-2px)' },
                                                                 }}>
                                                                 Send Message
                                                             </Button>
@@ -1242,7 +1263,7 @@ export default function LandingPage() {
             </Box>
 
             {/* ═══ FOOTER ══════════════════════════════════════════════════════ */}
-            <Box component="footer" sx={{ py: 10, bgcolor: isDark ? '#06090F' : '#0F172A', borderTop: '1px solid rgba(108,99,255,0.12)' }}>
+            <Box component="footer" sx={{ py: 10, bgcolor: isDark ? 'rgba(6,9,15,0.75)' : 'rgba(15,23,42,0.85)', backdropFilter: 'blur(12px)', borderTop: '1px solid rgba(217,119,6,0.12)' }}>
                 <Container maxWidth="xl">
                     <Grid container spacing={6} sx={{ mb: 8 }}>
                         {/* Brand col */}
@@ -1250,14 +1271,14 @@ export default function LandingPage() {
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
                                 <Box sx={{
                                     width: 36, height: 36, borderRadius: '10px',
-                                    background: 'linear-gradient(135deg, #6C63FF, #38BDF8)',
+                                    background: 'linear-gradient(135deg, #D97706, #FBBF24)',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     animation: 'pulseRing 3s ease-in-out infinite',
                                 }}>
                                     <Shield sx={{ fontSize: 18, color: '#fff' }} />
                                 </Box>
                                 <Typography fontWeight={800} sx={{
-                                    background: 'linear-gradient(90deg, #6C63FF, #38BDF8)',
+                                    background: 'linear-gradient(90deg, #D97706, #FBBF24)',
                                     WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                                     fontSize: '1.1rem',
                                 }}>
@@ -1269,7 +1290,7 @@ export default function LandingPage() {
                             </Typography>
                             <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
                                 {[<Twitter />, <LinkedIn />, <GitHub />].map((icon, i) => (
-                                    <IconButton key={i} size="small" sx={{ color: '#475569', transition: 'all 0.2s', '&:hover': { color: '#6C63FF', transform: 'translateY(-4px)' } }}>
+                                    <IconButton key={i} size="small" sx={{ color: '#475569', transition: 'all 0.2s', '&:hover': { color: '#D97706', transform: 'translateY(-4px)' } }}>
                                         {icon}
                                     </IconButton>
                                 ))}
@@ -1302,7 +1323,7 @@ export default function LandingPage() {
                                         <Typography key={link} variant="body2" sx={{
                                             color: '#475569', cursor: 'pointer',
                                             transition: 'all 0.18s',
-                                            '&:hover': { color: '#6C63FF', paddingLeft: '6px' },
+                                            '&:hover': { color: '#D97706', paddingLeft: '6px' },
                                         }}>
                                             {link}
                                         </Typography>
@@ -1330,6 +1351,28 @@ export default function LandingPage() {
                         </Typography>
                     </Box>
                 </Container>
+            </Box>
+            </ScrollSequence>
+
+            {/* ─── Scroll To Top FAB ─────────────────────────────────────────── */}
+            <Box
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                sx={{
+                    position: 'fixed', bottom: 32, right: 32, zIndex: 1200,
+                    width: 48, height: 48, borderRadius: '50%', cursor: 'pointer',
+                    background: 'linear-gradient(135deg, #D97706, #FBBF24)',
+                    boxShadow: '0 6px 24px rgba(217,119,6,0.45)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    opacity: scrolled ? 1 : 0,
+                    pointerEvents: scrolled ? 'auto' : 'none',
+                    transform: scrolled ? 'translateY(0)' : 'translateY(20px)',
+                    transition: 'opacity 0.3s ease, transform 0.3s ease, box-shadow 0.2s ease',
+                    '&:hover': { boxShadow: '0 10px 32px rgba(217,119,6,0.65)', transform: 'translateY(-3px)' },
+                }}
+            >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 19V5M5 12l7-7 7 7"/>
+                </svg>
             </Box>
         </Box>
     );

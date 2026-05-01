@@ -138,7 +138,7 @@ export default function FlagReview() {
             {/* Header */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3, alignItems: 'center' }}>
                 <Typography variant="h4" fontWeight={700}>
-                    <Flag sx={{ mr: 1, verticalAlign: 'middle', color: '#FF4D6A' }} />
+                    <Flag sx={{ mr: 1, verticalAlign: 'middle', color: '#B45309' }} />
                     Flag Review
                 </Typography>
             </Box>
@@ -146,8 +146,8 @@ export default function FlagReview() {
             {/* Summary Cards */}
             <Grid container spacing={2} sx={{ mb: 3 }}>
                 {[
-                    { label: 'Total Flags', value: totalFlags, color: '#6C63FF' },
-                    { label: '🔴 Red Flags', value: redFlags, color: '#FF4D6A' },
+                    { label: 'Total Flags', value: totalFlags, color: '#D97706' },
+                    { label: '🔴 Red Flags', value: redFlags, color: '#B45309' },
                     { label: '🟠 Orange Flags', value: orangeFlags, color: '#FF9800' },
                     { label: 'Unreviewed', value: unreviewedFlags, color: '#FFC107' },
                 ].map(stat => (
@@ -205,7 +205,7 @@ export default function FlagReview() {
                 <CardContent sx={{ p: 0 }}>
                     <Table size="small">
                         <TableHead>
-                            <TableRow sx={{ bgcolor: 'rgba(108,99,255,0.05)' }}>
+                            <TableRow sx={{ bgcolor: 'rgba(217,119,6,0.05)' }}>
                                 <TableCell sx={{ fontWeight: 700 }}>Type</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }}>Severity</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }}>Details</TableCell>
@@ -222,7 +222,7 @@ export default function FlagReview() {
                                     key={f.id}
                                     hover
                                     sx={{
-                                        borderLeft: (f.severity === 'high' || f.severity === 'RED') ? '3px solid #FF4D6A' :
+                                        borderLeft: (f.severity === 'high' || f.severity === 'RED') ? '3px solid #B45309' :
                                             (f.severity === 'medium' || f.severity === 'ORANGE' || f.severity === 'YELLOW') ? '3px solid #FF9800' : '3px solid transparent'
                                     }}
                                 >
@@ -316,7 +316,7 @@ export default function FlagReview() {
                 </DialogTitle>
                 <DialogContent>
                     {/* Flag Details */}
-                    <Paper sx={{ p: 2, mb: 2, bgcolor: 'rgba(108,99,255,0.03)', borderRadius: 2 }}>
+                    <Paper sx={{ p: 2, mb: 2, bgcolor: 'rgba(217,119,6,0.03)', borderRadius: 2 }}>
                         <Grid container spacing={2}>
                             <Grid size={{ xs: 6 }}>
                                 <Typography variant="body2"><strong>Type:</strong> {selectedFlag?.type || selectedFlag?.flag_type}</Typography>
@@ -360,7 +360,7 @@ export default function FlagReview() {
                                             e.target.style.display = 'none';
                                             const msg = document.createElement('div');
                                             msg.style.cssText = 'padding:24px;text-align:center;color:#aaa';
-                                            msg.innerHTML = `<p>⚠️ This clip was encoded with VP9 (not supported in Electron).</p><a href="${selectedFlag.evidence_url}" target="_blank" rel="noreferrer" style="color:#6C63FF">Open in browser ↗</a>`;
+                                            msg.innerHTML = `<p>⚠️ This clip was encoded with VP9 (not supported in Electron).</p><a href="${selectedFlag.evidence_url}" target="_blank" rel="noreferrer" style="color:#D97706">Open in browser ↗</a>`;
                                             e.target.parentNode.appendChild(msg);
                                         }}
                                     />

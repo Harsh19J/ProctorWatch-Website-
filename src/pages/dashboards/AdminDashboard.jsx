@@ -71,7 +71,7 @@ function QuickAction({ icon, label, onClick, color = 'primary', variant = 'outli
 }
 
 const roleChipColors = {
-    admin: '#6C63FF', teacher: '#38BDF8', student: '#4ECDC4', parent: '#FFB74D', technical: '#FF4D6A',
+    admin: '#D97706', teacher: '#FBBF24', student: '#0284C7', parent: '#78350F', technical: '#B45309',
 };
 
 export default function AdminDashboard() {
@@ -109,7 +109,7 @@ export default function AdminDashboard() {
             <Box sx={{ mb: 4, animation: 'fadeSlideRight 0.45s ease both' }}>
                 <Typography variant="h4" fontWeight={800} sx={{ letterSpacing: '-0.02em', mb: 0.5 }}>
                     Admin{' '}
-                    <Box component="span" sx={{ background: 'linear-gradient(90deg, #6C63FF, #38BDF8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                    <Box component="span" sx={{ background: 'linear-gradient(90deg, #D97706, #FBBF24)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                         Dashboard
                     </Box>
                 </Typography>
@@ -119,10 +119,10 @@ export default function AdminDashboard() {
             {/* Stats */}
             <Grid container spacing={3} sx={{ mb: 4 }}>
                 {[
-                    { title: 'Total Users', value: stats.users, icon: <People />, color: '#6C63FF', subtitle: 'Students, Teachers, Parents', delay: 0.05 },
-                    { title: 'Courses', value: stats.courses, icon: <School />, color: '#38BDF8', delay: 0.11 },
-                    { title: 'Total Students', value: stats.students, icon: <School />, color: '#4ECDC4', delay: 0.17 },
-                    { title: 'Active Sessions', value: stats.activeSessions, icon: <Visibility />, color: '#FFB74D', subtitle: 'Exams in progress', delay: 0.23 },
+                    { title: 'Total Users', value: stats.users, icon: <People />, color: '#D97706', subtitle: 'Students, Teachers, Parents', delay: 0.05 },
+                    { title: 'Courses', value: stats.courses, icon: <School />, color: '#FBBF24', delay: 0.11 },
+                    { title: 'Total Students', value: stats.students, icon: <School />, color: '#0284C7', delay: 0.17 },
+                    { title: 'Active Sessions', value: stats.activeSessions, icon: <Visibility />, color: '#78350F', subtitle: 'Exams in progress', delay: 0.23 },
                 ].map((s, i) => (
                     <Grid key={i} item xs={12} sm={6} md={3}>
                         <StatCard {...s} />
@@ -157,12 +157,12 @@ export default function AdminDashboard() {
                     <Card sx={{ height: '100%' }}>
                         <CardContent sx={{ p: 3 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
-                                <Box sx={{ p: 1, borderRadius: '10px', bgcolor: 'rgba(78,205,196,0.1)', color: '#4ECDC4', display: 'flex' }}>
+                                <Box sx={{ p: 1, borderRadius: '10px', bgcolor: 'rgba(78,205,196,0.1)', color: '#0284C7', display: 'flex' }}>
                                     <Visibility sx={{ fontSize: 20 }} />
                                 </Box>
                                 <Typography variant="h6" fontWeight={700}>Active Exam Sessions</Typography>
                                 {activeSessions.length > 0 && (
-                                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#4ECDC4', ml: 'auto', animation: 'pulseDot 1.5s ease-in-out infinite' }} />
+                                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#0284C7', ml: 'auto', animation: 'pulseDot 1.5s ease-in-out infinite' }} />
                                 )}
                             </Box>
                             {activeSessions.length === 0 ? (
@@ -180,7 +180,7 @@ export default function AdminDashboard() {
                                         animation: `fadeSlideUp 0.38s ease ${idx * 0.08}s both`,
                                     }}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                            <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#4ECDC4', animation: 'pulseDot 1.8s ease-in-out infinite' }} />
+                                            <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#0284C7', animation: 'pulseDot 1.8s ease-in-out infinite' }} />
                                             <Typography variant="body2" fontWeight={600}>Session {session.id.slice(0, 8)}…</Typography>
                                         </Box>
                                         <Box sx={{ display: 'flex', gap: 1 }}>
@@ -200,7 +200,7 @@ export default function AdminDashboard() {
                 <CardContent sx={{ p: 3 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2.5 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <Box sx={{ p: 1, borderRadius: '10px', bgcolor: 'rgba(108,99,255,0.1)', color: '#6C63FF', display: 'flex' }}>
+                            <Box sx={{ p: 1, borderRadius: '10px', bgcolor: 'rgba(217,119,6,0.1)', color: '#D97706', display: 'flex' }}>
                                 <People sx={{ fontSize: 20 }} />
                             </Box>
                             <Typography variant="h6" fontWeight={700}>Recent Users</Typography>

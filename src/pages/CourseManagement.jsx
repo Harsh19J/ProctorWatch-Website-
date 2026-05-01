@@ -6,7 +6,7 @@ import {
     List, ListItem, ListItemButton, ListItemText, Checkbox
 } from '@mui/material';
 import { School, Add, Edit, Delete, People } from '@mui/icons-material';
-import { supabase } from '../lib/supabase';
+import api from '../lib/api';
 import useAuthStore from '../store/authStore';
 
 export default function CourseManagement() {
@@ -28,21 +28,12 @@ export default function CourseManagement() {
     useEffect(() => { loadData(); }, []);
 
     const loadData = async () => {
-        let query = supabase.from('courses').select('*, users!courses_teacher_id_fkey(username), enrollments(count)');
-        if (user.role === 'teacher') query = query.eq('teacher_id', user.id);
-        if (user.role === 'student') {
-            const { data: enrolled } = await supabase.from('enrollments').select('course_id').eq('student_id', user.id);
-            const ids = enrolled?.map(e => e.course_id) || [];
-            if (ids.length > 0) query = query.in('id', ids);
-            else { setCourses([]); setLoading(false); return; }
-        }
-        const { data } = await query.order('created_at', { ascending: false });
+        const data = await api.get('/api/courses');
         setCourses(data || []);
         if (isAdmin) {
-            const { data: t } = await supabase.from('users').select('id, username').eq('role', 'teacher');
-            setTeachers(t || []);
-            const { data: s } = await supabase.from('users').select('id, username, full_name, email').eq('role', 'student');
-            setStudents(s || []);
+            const allUsers = await api.get('/api/users');
+            setTeachers(allUsers.filter(u => u.role === 'teacher'));
+            setStudents(allUsers.filter(u => u.role === 'student'));
         }
         setLoading(false);
     };
@@ -50,21 +41,17 @@ export default function CourseManagement() {
     const handleCreate = async () => {
         setError('');
         try {
-            const { data: inst } = await supabase.from('institutions').select('id').limit(1);
-            const { error: err } = await supabase.from('courses').insert({
-                ...form, institution_id: inst?.[0]?.id, is_active: true,
-                teacher_id: form.teacher_id || null,
+            await api.post('/api/courses', {
+                ...form, is_active: true, teacher_id: form.teacher_id || null,
             });
-            if (err) throw err;
             setOpen(false); setForm({ name: '', code: '', description: '', teacher_id: '' }); loadData();
         } catch (err) { setError(err.message); }
     };
 
     const fetchEnrollments = async (course) => {
         try {
-            const { data } = await supabase.from('enrollments')
-                .select('student_id').eq('course_id', course.id);
-            setEnrolledStudentIds(new Set(data?.map(e => e.student_id) || []));
+            const data = await api.get(`/api/courses/${course.id}/enrollments`);
+            setEnrolledStudentIds(new Set((data || []).map(e => e.student_id)));
         } catch (err) { console.error('Error fetching enrollments:', err); }
     };
 
@@ -72,15 +59,9 @@ export default function CourseManagement() {
         if (!selectedCourse) return;
         try {
             if (isEnrolled) {
-                // Unenroll
-                await supabase.from('enrollments')
-                    .delete()
-                    .eq('course_id', selectedCourse.id)
-                    .eq('student_id', studentId);
+                await api.del(`/api/courses/${selectedCourse.id}/enroll/${studentId}`);
             } else {
-                // Enroll
-                await supabase.from('enrollments')
-                    .insert({ course_id: selectedCourse.id, student_id: studentId });
+                await api.post(`/api/courses/${selectedCourse.id}/enroll`, { student_id: studentId });
             }
             // Update local set for instant UI response
             setEnrolledStudentIds(prev => {

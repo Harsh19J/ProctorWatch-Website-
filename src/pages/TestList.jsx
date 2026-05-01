@@ -6,7 +6,7 @@ import {
     Select, MenuItem, InputLabel, FormControl, CircularProgress
 } from '@mui/material';
 import { Assignment, PlayArrow, Visibility, Delete, Download } from '@mui/icons-material';
-import { supabase } from '../lib/supabase';
+import api from '../lib/api';
 import useAuthStore from '../store/authStore';
 import { useNavigate } from 'react-router-dom';
 
@@ -21,20 +21,12 @@ export default function TestList() {
     useEffect(() => { loadTests(); }, []);
 
     const loadTests = async () => {
-        let query = supabase.from('tests').select('*, courses(name, code)').order('start_time', { ascending: false });
+        const data = await api.get('/api/tests');
+        setTests(data || []);
         if (user.role === 'teacher') {
-            query = query.eq('created_by', user.id);
-            const { data: cData } = await supabase.from('courses').select('id, name').eq('teacher_id', user.id);
+            const cData = await api.get('/api/courses');
             setCourses(cData || []);
         }
-        if (user.role === 'student') {
-            const { data: enrolled } = await supabase.from('enrollments').select('course_id').eq('student_id', user.id);
-            const ids = enrolled?.map(e => e.course_id) || [];
-            if (ids.length > 0) query = query.in('course_id', ids);
-            else { setTests([]); setLoading(false); return; }
-        }
-        const { data } = await query.limit(50);
-        setTests(data || []);
         setLoading(false);
     };
 
@@ -50,22 +42,19 @@ export default function TestList() {
         if (!exportCourseId) return;
         setExporting(true);
         try {
-            // 1. Fetch all tests for this course
-            const { data: courseTests } = await supabase.from('tests')
-                .select('id, title, total_marks').eq('course_id', exportCourseId).order('start_time', { ascending: true });
+            const allTests = await api.get('/api/tests');
+            const courseTests = allTests.filter(t => t.course_id === exportCourseId)
+                .sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
 
-            // 2. Fetch all enrolled students for this course
-            const { data: enrollments } = await supabase.from('enrollments')
-                .select('users!enrollments_student_id_fkey(id, full_name, username)')
-                .eq('course_id', exportCourseId);
-            const enrolledStudents = enrollments?.map(e => e.users) || [];
+            const allUsers = await api.get('/api/users');
+            const allEnrollments = await api.get(`/api/courses/${exportCourseId}/enrollments`);
+            const enrolledStudents = allUsers.filter(u => allEnrollments.some(e => e.student_id === u.id));
 
-            // 3. Fetch all exam sessions for these tests
             let sessions = [];
-            if (courseTests?.length > 0) {
+            if (courseTests.length > 0) {
+                const sessAll = await api.get('/api/sessions');
                 const testIds = courseTests.map(t => t.id);
-                const { data: sessData } = await supabase.from('exam_sessions').select('*').in('test_id', testIds);
-                sessions = sessData || [];
+                sessions = sessAll.filter(s => testIds.includes(s.test_id));
             }
 
             // CSV Building
@@ -116,9 +105,7 @@ export default function TestList() {
         if (!testToDelete) return;
         try {
             // Delete test (cascade should handle related records if DB is set up, otherwise we manually delete)
-            await supabase.from('test_questions').delete().eq('test_id', testToDelete);
-            await supabase.from('exam_sessions').delete().eq('test_id', testToDelete);
-            await supabase.from('tests').delete().eq('id', testToDelete);
+            await api.del(`/api/tests/${testToDelete}`);
 
             setDeleteConfirmOpen(false);
             setTestToDelete(null);

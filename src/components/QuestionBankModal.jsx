@@ -6,7 +6,7 @@ import {
     Typography, Pagination,
 } from '@mui/material';
 import { Search, Info } from '@mui/icons-material';
-import { supabase } from '../lib/supabase';
+import api from '../lib/api';
 import useAuthStore from '../store/authStore';
 
 export default function QuestionBankModal({ open, onClose, onImport }) {
@@ -31,74 +31,43 @@ export default function QuestionBankModal({ open, onClose, onImport }) {
     }, [open]);
 
     const loadCourses = async () => {
-        const { data } = await supabase.from('courses').select('id, name');
+        const data = await api.get('/api/courses');
         setCourses(data || []);
     };
 
     const loadTests = async () => {
-        let query = supabase.from('tests').select('id, title, course_id');
-        if (selectedCourse !== 'all') {
-            query = query.eq('course_id', selectedCourse);
-        }
-        const { data } = await query;
-        setTests(data || []);
+        const data = await api.get('/api/tests');
+        const filtered = selectedCourse !== 'all' ? data.filter(t => t.course_id === selectedCourse) : data;
+        setTests(filtered || []);
     };
 
     const loadQuestions = async () => {
         setLoading(true);
-
         let data = [];
-        let query;
-
-        if (selectedTest !== 'all') {
-            // Fetch via junction table
-            const { data: testQs } = await supabase
-                .from('test_questions')
-                .select('questions(*)')
-                .eq('test_id', selectedTest);
-
-            data = testQs?.map(t => t.questions) || [];
-        } else {
-            // Fetch all questions (raw)
-            // If selectedCourse is set, we need to join tests... this is complex in Supabase simple query
-            // For now, let's just fetch all questions (limit 100?) or refine later
-            // Or fetch all test_questions for tests in this course?
-
-            if (selectedCourse !== 'all') {
-                // Get test IDs for this course
+        try {
+            if (selectedTest !== 'all') {
+                const testData = await api.get(`/api/tests/${selectedTest}/questions`);
+                data = testData || [];
+            } else if (selectedCourse !== 'all') {
                 const testIds = tests.map(t => t.id);
-                if (testIds.length > 0) {
-                    const { data: courseQs } = await supabase
-                        .from('test_questions')
-                        .select('questions(*)')
-                        .in('test_id', testIds);
-                    // Dedupe
-                    const map = new Map();
-                    courseQs?.forEach(item => {
-                        if (item.questions) map.set(item.questions.id, item.questions);
-                    });
-                    data = Array.from(map.values());
-                }
+                const allQ = await api.get('/api/questions');
+                data = allQ.filter(q => testIds.includes(q.test_id));
             } else {
-                const { data: allQs } = await supabase.from('questions').select('*').limit(500);
-                data = allQs || [];
+                data = await api.get('/api/questions');
             }
-        }
-
-        if (searchTerm) {
-            const lowerTerm = searchTerm.toLowerCase();
-            data = data.filter(q => q.question_text.toLowerCase().includes(lowerTerm));
-        }
-
-        // Deduplicate by question_text to avoid clutter
-        const uniqueQuestions = Object.values(
-            data.reduce((acc, q) => {
-                if (!acc[q.question_text]) acc[q.question_text] = q;
-                return acc;
-            }, {})
-        );
-
-        setQuestions(uniqueQuestions);
+            if (searchTerm) {
+                const lowerTerm = searchTerm.toLowerCase();
+                data = data.filter(q => (q.question_text || q.text || '').toLowerCase().includes(lowerTerm));
+            }
+            const uniqueQuestions = Object.values(
+                data.reduce((acc, q) => {
+                    const key = q.question_text || q.text || q.id;
+                    if (!acc[key]) acc[key] = q;
+                    return acc;
+                }, {})
+            );
+            setQuestions(uniqueQuestions);
+        } catch (err) { console.error(err); }
         setLoading(false);
     };
 

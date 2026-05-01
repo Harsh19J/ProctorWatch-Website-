@@ -7,7 +7,7 @@ import {
 import { LockReset, CameraAlt, CheckCircle, Gavel } from '@mui/icons-material';
 import { useTheme } from '@mui/material';
 import useAuthStore from '../store/authStore';
-import { supabase } from '../lib/supabase';
+import api from '../lib/api';
 
 const steps = ['Change Password', 'Upload Photo', 'Accept Consent'];
 
@@ -31,93 +31,48 @@ export default function FirstLoginPage() {
     if (!user) return null;
 
     const handlePasswordChange = async () => {
-        if (newPassword.length < 8) {
-            setError('Password must be at least 8 characters');
-            return;
-        }
-        if (newPassword !== confirmPassword) {
-            setError('Passwords do not match');
-            return;
-        }
+        if (newPassword.length < 8) { setError('Password must be at least 8 characters'); return; }
+        if (newPassword !== confirmPassword) { setError('Passwords do not match'); return; }
         setLoading(true);
         try {
-            // For first login, directly update the password hash (no old password needed)
-            const encoder = new TextEncoder();
-            const data = encoder.encode(newPassword);
-            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            const newHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-            const { error: updateError } = await supabase.from('users')
-                .update({ password_hash: newHash })
-                .eq('id', user.id);
-
-            if (updateError) throw updateError;
-
-            setActiveStep(1);
-            setError('');
-        } catch (err) {
-            setError(err.message);
-        }
+            await api.patch(`/api/users/${user.id}/profile`, { password: newPassword });
+            setActiveStep(1); setError('');
+        } catch (err) { setError(err.message); }
         setLoading(false);
     };
 
     const handlePhotoUpload = async () => {
-        if (!photoFile) {
-            setError('Please select a photo');
-            return;
-        }
+        if (!photoFile) { setError('Please select a photo'); return; }
         setLoading(true);
         try {
-            const fileExt = photoFile.name.split('.').pop();
-            const filePath = `${user.id}/profile.${fileExt}`;
-
-            const { error: uploadError } = await supabase.storage
-                .from('profile-photos')
-                .upload(filePath, photoFile, { upsert: true });
-
-            if (uploadError) throw uploadError;
-
-            const { data: { publicUrl } } = supabase.storage
-                .from('profile-photos')
-                .getPublicUrl(filePath);
-
-            await supabase.from('users')
-                .update({ profile_photo_url: publicUrl })
-                .eq('id', user.id);
-
-            setActiveStep(2);
-            setError('');
-        } catch (err) {
-            setError(err.message);
-        }
-        setLoading(false);
+            // Convert to base64 and send to backend
+            const reader = new FileReader();
+            reader.onload = async (ev) => {
+                try {
+                    await api.patch(`/api/users/${user.id}/profile`, {
+                        profile_photo_url: ev.target.result, // base64 data URL
+                    });
+                    setActiveStep(2); setError('');
+                } catch (err) { setError(err.message); }
+                setLoading(false);
+            };
+            reader.readAsDataURL(photoFile);
+        } catch (err) { setError(err.message); setLoading(false); }
     };
 
     const handleConsentAccept = async () => {
         setLoading(true);
         try {
-            await supabase.from('consents').insert({
-                user_id: user.id,
-                consent_type: 'terms_and_conditions',
-            });
-
-            await supabase.from('users')
-                .update({ first_login: false })
-                .eq('id', user.id);
+            await api.patch(`/api/users/${user.id}/profile`, { first_login: false });
 
             // Update local session AND Zustand store
             const stored = JSON.parse(localStorage.getItem('pw_session'));
             stored.user.first_login = false;
             localStorage.setItem('pw_session', JSON.stringify(stored));
-
-            // Update Zustand store so ProtectedRoute sees the change
             useAuthStore.setState({ user: { ...user, first_login: false } });
 
             navigate('/dashboard');
-        } catch (err) {
-            setError(err.message);
-        }
+        } catch (err) { setError(err.message); }
         setLoading(false);
     };
 
@@ -135,8 +90,8 @@ export default function FirstLoginPage() {
         <Box sx={{
             minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: isDark
-                ? `radial-gradient(ellipse at 30% 40%, rgba(108, 99, 255, 0.12) 0%, transparent 60%), ${theme.palette.background.default}`
-                : `radial-gradient(ellipse at 30% 40%, rgba(108, 99, 255, 0.06) 0%, transparent 60%), ${theme.palette.background.default}`,
+                ? `radial-gradient(ellipse at 30% 40%, rgba(217, 119, 6, 0.12) 0%, transparent 60%), ${theme.palette.background.default}`
+                : `radial-gradient(ellipse at 30% 40%, rgba(217, 119, 6, 0.06) 0%, transparent 60%), ${theme.palette.background.default}`,
             p: 2,
         }}>
             <Box sx={{ width: '100%', maxWidth: 520 }}>
@@ -155,7 +110,7 @@ export default function FirstLoginPage() {
                     ))}
                 </Stepper>
 
-                <Card sx={{ border: '1px solid rgba(108, 99, 255, 0.15)' }}>
+                <Card sx={{ border: '1px solid rgba(217, 119, 6, 0.15)' }}>
                     <CardContent sx={{ p: 4 }}>
                         {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{error}</Alert>}
 
@@ -192,7 +147,7 @@ export default function FirstLoginPage() {
                                 </Box>
                                 <Avatar
                                     src={photoPreview}
-                                    sx={{ width: 120, height: 120, mx: 'auto', mb: 2, border: '3px solid rgba(108, 99, 255, 0.3)' }}
+                                    sx={{ width: 120, height: 120, mx: 'auto', mb: 2, border: '3px solid rgba(217, 119, 6, 0.3)' }}
                                 />
                                 <input type="file" accept="image/*" onChange={handleFileChange}
                                     id="photo-upload" style={{ display: 'none' }} />

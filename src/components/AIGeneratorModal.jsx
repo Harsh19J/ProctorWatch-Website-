@@ -395,7 +395,7 @@ ${sourceText}`;
                                         sx={{
                                             alignItems: 'flex-start', py: 2, cursor: 'pointer',
                                             bgcolor: isSelected ? 'rgba(78, 205, 196, 0.05)' : 'transparent',
-                                            borderLeft: isSelected ? '4px solid #4ECDC4' : '4px solid transparent',
+                                            borderLeft: isSelected ? '4px solid #0284C7' : '4px solid transparent',
                                             transition: 'all 0.2s'
                                         }}
                                         onClick={() => handleToggleQuestion(idx)}

@@ -5,15 +5,8 @@ import {
     Chip, IconButton, MenuItem, Alert, LinearProgress, Tooltip, Avatar, Divider, Tabs, Tab,
 } from '@mui/material';
 import { PersonAdd, Upload, Edit, Block, CheckCircle, Search, Download, FamilyRestroom, School } from '@mui/icons-material';
-import { supabase } from '../lib/supabase';
+import api from '../lib/api';
 import useAuthStore from '../store/authStore';
-
-async function hashPassword(password) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(password);
-    const buf = await crypto.subtle.digest('SHA-256', data);
-    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
 
 const emptyForm = { full_name: '', email: '', phone: '', role: 'student', parent_name: '', parent_email: '', parent_phone: '' };
 
@@ -35,7 +28,7 @@ export default function UserManagement() {
     useEffect(() => { loadUsers(); }, []);
 
     const loadUsers = async () => {
-        const { data } = await supabase.from('users').select('*').order('created_at', { ascending: false });
+        const data = await api.get('/api/users');
         setUsers(data || []);
         setLoading(false);
     };
@@ -48,17 +41,14 @@ export default function UserManagement() {
     // Helper: create a single user and return the record
     const createUser = async (full_name, email, phone, role) => {
         const username = generateUsername(email);
-        const passwordHash = await hashPassword(phone);
-        const { data, error } = await supabase.from('users').insert({
-            email, username, phone, full_name, role, password_hash: passwordHash, first_login: true,
-        }).select().single();
-        if (error) throw error;
-        return data;
+        return await api.post('/api/users', {
+            email, username, phone, full_name, role, password: phone,
+        });
     };
 
     // Helper: link parent ↔ student
     const linkParentStudent = async (parentId, studentId) => {
-        await supabase.from('parent_student').insert({ parent_id: parentId, student_id: studentId });
+        await api.post('/api/users/parent-student', { parent_id: parentId, student_id: studentId });
     };
 
     const handleCreate = async () => {
@@ -113,12 +103,12 @@ export default function UserManagement() {
                     return;
                 }
 
-                // Check if parent already exists
-                const { data: existing } = await supabase.from('users').select('id')
-                    .eq('email', form.parent_email.trim()).limit(1);
+                // Check if parent already exists by fetching all users and filtering
+                const allUsers = await api.get('/api/users');
+                const existing = allUsers.filter(u => u.email === form.parent_email.trim());
 
                 let parentId;
-                if (existing && existing.length > 0) {
+                if (existing.length > 0) {
                     parentId = existing[0].id;
                 } else {
                     const parent = await createUser(
@@ -130,10 +120,7 @@ export default function UserManagement() {
                 await linkParentStudent(parentId, user.id);
             }
 
-            await supabase.from('audit_logs').insert({
-                action: 'USER_CREATED', user_id: currentUser.id,
-                details: { email: form.email, role: form.role },
-            });
+            // Audit log handled server-side
             setOpen(false);
             setForm({ ...emptyForm });
             loadUsers();
@@ -191,11 +178,11 @@ export default function UserManagement() {
 
                 // Create or find parent and link
                 if (row.parent_email?.trim()) {
-                    const { data: existing } = await supabase.from('users').select('id')
-                        .eq('email', row.parent_email.trim()).limit(1);
+                    const allUsers = await api.get('/api/users');
+                    const existing = allUsers.filter(u => u.email === row.parent_email.trim());
 
                     let parentId;
-                    if (existing && existing.length > 0) {
+                    if (existing.length > 0) {
                         parentId = existing[0].id;
                     } else {
                         const parent = await createUser(
@@ -233,7 +220,7 @@ export default function UserManagement() {
     };
 
     const toggleActive = async (userId, active) => {
-        await supabase.from('users').update({ is_active: !active }).eq('id', userId);
+        await api.patch(`/api/users/${userId}`, { is_active: !active });
         loadUsers();
     };
 

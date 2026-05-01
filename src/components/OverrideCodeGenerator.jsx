@@ -7,7 +7,7 @@ import {
 import {
     Key, ContentCopy, Refresh, CheckCircle, Timer, Lock,
 } from '@mui/icons-material';
-import { supabase } from '../lib/supabase';
+import api from '../lib/api';
 import useAuthStore from '../store/authStore';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -63,16 +63,7 @@ export default function OverrideCodeGenerator({ open, onClose }) {
         try {
             const code = generateCode();
             const expiresAt = new Date(Date.now() + CODE_TTL_SECONDS * 1000).toISOString();
-
-            const { error: dbErr } = await supabase.from('override_codes').insert({
-                code,
-                purpose,
-                created_by: user.id,
-                expires_at: expiresAt,
-            });
-
-            if (dbErr) throw dbErr;
-
+            await api.post('/api/override-codes', { code, purpose, expires_at: expiresAt });
             setGeneratedCode({ code, expiresAt });
         } catch (err) {
             setError(err.message || 'Failed to generate code');
@@ -99,16 +90,16 @@ export default function OverrideCodeGenerator({ open, onClose }) {
     };
 
     const isExpired = timeLeft === 0 && generatedCode;
-    const urgentColor = timeLeft < 60 ? '#FF4D6A' : timeLeft < 120 ? '#FFB74D' : '#4ECDC4';
+    const urgentColor = timeLeft < 60 ? '#B45309' : timeLeft < 120 ? '#78350F' : '#0284C7';
 
     return (
         <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
             <DialogTitle sx={{
                 display: 'flex', alignItems: 'center', gap: 1.5,
-                bgcolor: 'rgba(108,99,255,0.08)',
-                borderBottom: '1px solid rgba(108,99,255,0.15)',
+                bgcolor: 'rgba(217,119,6,0.08)',
+                borderBottom: '1px solid rgba(217,119,6,0.15)',
             }}>
-                <Key sx={{ color: '#6C63FF' }} />
+                <Key sx={{ color: '#D97706' }} />
                 <Box>
                     <Typography fontWeight={700} variant="subtitle1">Generate Override Code</Typography>
                     <Typography variant="caption" color="text.secondary">
@@ -168,8 +159,8 @@ export default function OverrideCodeGenerator({ open, onClose }) {
                         {/* The code display */}
                         <Box sx={{
                             p: 3, borderRadius: 3, mb: 2,
-                            bgcolor: isExpired ? 'rgba(255,77,106,0.06)' : 'rgba(108,99,255,0.06)',
-                            border: `2px solid ${isExpired ? 'rgba(255,77,106,0.3)' : 'rgba(108,99,255,0.2)'}`,
+                            bgcolor: isExpired ? 'rgba(180,83,9,0.06)' : 'rgba(217,119,6,0.06)',
+                            border: `2px solid ${isExpired ? 'rgba(180,83,9,0.3)' : 'rgba(217,119,6,0.2)'}`,
                             position: 'relative',
                         }}>
                             <Typography
@@ -178,7 +169,7 @@ export default function OverrideCodeGenerator({ open, onClose }) {
                                 fontWeight={800}
                                 letterSpacing={8}
                                 sx={{
-                                    color: isExpired ? 'text.disabled' : '#6C63FF',
+                                    color: isExpired ? 'text.disabled' : '#D97706',
                                     textDecoration: isExpired ? 'line-through' : 'none',
                                     userSelect: 'text',
                                 }}
@@ -193,7 +184,7 @@ export default function OverrideCodeGenerator({ open, onClose }) {
                                         onClick={handleCopy}
                                         sx={{
                                             position: 'absolute', top: 8, right: 8,
-                                            color: copied ? '#4ECDC4' : 'text.secondary',
+                                            color: copied ? '#0284C7' : 'text.secondary',
                                         }}
                                     >
                                         {copied ? <CheckCircle fontSize="small" /> : <ContentCopy fontSize="small" />}
@@ -204,7 +195,7 @@ export default function OverrideCodeGenerator({ open, onClose }) {
 
                         {/* Countdown */}
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 2 }}>
-                            <Timer sx={{ fontSize: 18, color: isExpired ? '#FF4D6A' : urgentColor }} />
+                            <Timer sx={{ fontSize: 18, color: isExpired ? '#B45309' : urgentColor }} />
                             {isExpired ? (
                                 <Typography color="error" fontWeight={600}>Code Expired</Typography>
                             ) : (
@@ -238,7 +229,7 @@ export default function OverrideCodeGenerator({ open, onClose }) {
                         onClick={handleGenerate}
                         disabled={generating}
                         startIcon={generating ? <CircularProgress size={16} /> : <Key />}
-                        sx={{ bgcolor: '#6C63FF', '&:hover': { bgcolor: '#5a52e0' } }}
+                        sx={{ bgcolor: '#D97706', '&:hover': { bgcolor: '#5a52e0' } }}
                     >
                         Generate Code
                     </Button>

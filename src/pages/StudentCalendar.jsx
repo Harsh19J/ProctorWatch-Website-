@@ -4,7 +4,7 @@ import {
     Grid, Button, Divider, Alert, TextField, MenuItem
 } from '@mui/material';
 import { PlayArrow, CalendarMonth, AccessTime, Event } from '@mui/icons-material';
-import { supabase } from '../lib/supabase';
+import api from '../lib/api';
 import useAuthStore from '../store/authStore';
 import { useNavigate } from 'react-router-dom';
 
@@ -26,42 +26,21 @@ export default function StudentCalendar() {
     }, [user]);
 
     const loadChildren = async () => {
-        const { data } = await supabase.from('parent_student')
-            .select('student_id, users!parent_student_student_id_fkey(id, username, email)')
-            .eq('parent_id', user.id);
-
-        const kids = data?.map(d => d.users) || [];
+        const data = await api.get(`/api/users?role=student&parent_id=${user.id}`);
+        const kids = data || [];
         setChildren(kids);
-        if (kids.length > 0) {
-            setSelectedChild(kids[0].id);
-            loadTests(kids[0].id);
-        } else {
-            setLoading(false);
-        }
+        if (kids.length > 0) { setSelectedChild(kids[0].id); loadTests(kids[0].id); }
+        else setLoading(false);
     };
 
     const loadTests = async (studentId) => {
         try {
-            // Get enrolled courses
-            const { data: enrolled } = await supabase.from('enrollments').select('course_id').eq('student_id', studentId);
-            const courseIds = enrolled?.map(e => e.course_id) || [];
-
-            if (courseIds.length === 0) {
-                setTests([]);
-                setLoading(false);
-                return;
-            }
-
-            // Get only upcoming/active tests (exclude expired)
             const now = new Date().toISOString();
-            const { data } = await supabase
-                .from('tests')
-                .select('*, courses(name, code)')
-                .in('course_id', courseIds)
-                .gt('end_time', now)          // skip anything already expired
-                .order('start_time', { ascending: true }); // nearest exam first
-
-            setTests(data || []);
+            const allTests = await api.get(`/api/tests`);
+            const upcoming = (allTests || []).filter(t =>
+                t.end_time && t.end_time > now
+            ).sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+            setTests(upcoming);
         } catch (error) {
             console.error('Error loading calendar:', error);
         } finally {

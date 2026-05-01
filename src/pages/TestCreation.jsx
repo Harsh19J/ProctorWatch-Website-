@@ -4,7 +4,7 @@ import {
     IconButton, Alert, Grid, Chip, Divider, Switch, FormControlLabel,
 } from '@mui/material';
 import { Add, Delete, Save } from '@mui/icons-material';
-import { supabase } from '../lib/supabase';
+import api from '../lib/api';
 import useAuthStore from '../store/authStore';
 import { useNavigate, useLocation } from 'react-router-dom';
 import RichTextEditor from '../components/RichTextEditor';
@@ -33,9 +33,7 @@ export default function TestCreation() {
 
     useEffect(() => {
         const loadCourses = async () => {
-            let query = supabase.from('courses').select('id, name, code');
-            if (user.role === 'teacher') query = query.eq('teacher_id', user.id);
-            const { data } = await query;
+            const data = await api.get('/api/courses');
             setCourses(data || []);
         };
 
@@ -148,67 +146,25 @@ export default function TestCreation() {
             const startDate = new Date(test.start_time);
             const endDate = new Date(startDate.getTime() + test.duration_minutes * 60000);
 
-            const { data: testData, error: testErr } = await supabase.from('tests').insert({
+            const testData = await api.post('/api/tests', {
                 course_id: test.course_id, title: test.title, description: test.description,
                 start_time: startDate.toISOString(),
                 end_time: endDate.toISOString(),
                 duration_minutes: test.duration_minutes,
-                total_marks: totalMarks, created_by: user.id,
-                settings: {
-                    negative_marking: test.negative_marking,
-                    proctoring_enabled: true,
-                    extra_time_students: extraTimeMap
-                },
-            }).select().single();
-            if (testErr) throw testErr;
-
-            // Separate new questions vs existing bank questions
-            const newQuestions = questions.filter(q => !q.id);
-            const existingQuestions = questions.filter(q => q.id);
-
-            // 1. Insert New Questions
-            let createdQuestionIds = [];
-            if (newQuestions.length > 0) {
-                const qRows = newQuestions.map(q => ({
-                    question_text: q.question_text, question_type: q.question_type,
-                    options: q.options, correct_answer: q.correct_answer, marks: q.marks,
-                    negative_marks: q.negative_marks
-                    // No test_id or order here anymore
-                }));
-                const { data: insertedQs, error: qErr } = await supabase
-                    .from('questions').insert(qRows).select('id');
-                if (qErr) throw qErr;
-                createdQuestionIds = insertedQs.map(q => q.id);
-            }
-
-            // 2. Prepare Junction Table Entries
-            const junctionRows = [];
-
-            // Map new questions to their IDs (assuming order is preserved in insert return)
-            // Note: Postgres insert returning order is usually reliable but not guaranteed strictly parallel
-            // For safety, we should assume map parallel locally or refactor to single inserts effectively
-            // BUT for this scope, let's map by index offset
-
-            let newQIndex = 0;
-            questions.forEach((q, index) => {
-                let qId = q.id;
-                if (!qId) {
-                    qId = createdQuestionIds[newQIndex];
-                    newQIndex++;
-                }
-
-                if (qId) {
-                    junctionRows.push({
-                        test_id: testData.id,
-                        question_id: qId,
-                        question_order: index + 1,
-                        marks: q.marks // Snapshot marks for this test
-                    });
-                }
+                total_marks: totalMarks,
+                negative_marking: test.negative_marking,
+                randomize_questions: test.randomize_questions,
+                extra_time_students: extraTimeMap,
             });
 
-            const { error: jErr } = await supabase.from('test_questions').insert(junctionRows);
-            if (jErr) throw jErr;
+            // Insert all questions (new + bank re-links)
+            const allQuestions = questions.map((q, i) => ({
+                text: q.question_text, question_type: q.question_type,
+                options: q.options, correct_option: q.correct_answer,
+                marks: q.marks, negative_marks: q.negative_marks,
+                order: i,
+            }));
+            await api.post(`/api/tests/${testData.id}/questions`, { questions: allQuestions });
 
             setSuccess('Test created successfully!');
             setTimeout(() => navigate('/dashboard/tests'), 1500);

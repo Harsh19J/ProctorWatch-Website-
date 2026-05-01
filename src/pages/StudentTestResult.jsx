@@ -11,7 +11,7 @@ import {
     ArrowBack, CheckCircle, Cancel, Help, Flag, Warning,
     Videocam, PlayArrow, Info, AutoAwesome
 } from '@mui/icons-material';
-import { supabase } from '../lib/supabase';
+import api from '../lib/api';
 import useAuthStore from '../store/authStore';
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
@@ -43,44 +43,17 @@ export default function StudentTestResult() {
 
     const loadResult = async () => {
         try {
-            // Get session details
-            const { data: sessionData } = await supabase
-                .from('exam_sessions')
-                .select('*, tests(*)')
-                .eq('id', sessionId)
-                .single();
-
-            setSession(sessionData);
-
-            if (sessionData) {
-                // Get questions via junction table
-                const { data: qData } = await supabase
-                    .from('test_questions')
-                    .select('questions(*)')
-                    .eq('test_id', sessionData.test_id)
-                    .order('question_order');
-
-                const flatQuestions = qData?.map(q => q.questions) || [];
-                setQuestions(flatQuestions);
-
-                // Get answers
-                const { data: aData } = await supabase
-                    .from('answers')
-                    .select('*')
-                    .eq('session_id', sessionId);
-
+            const data = await api.get(`/api/sessions/${sessionId}`);
+            setSession({ ...data, tests: data.test });
+            if (data) {
+                // Questions for this test
+                const qs = await api.get(`/api/tests/${data.test_id}/questions`);
+                setQuestions(qs || []);
+                // Build answers map
                 const ansMap = {};
-                aData?.forEach(a => ansMap[a.question_id] = a);
+                (data.answers || []).forEach(a => { ansMap[a.question_id] = a; });
                 setAnswers(ansMap);
-
-                // Get flags
-                const { data: flagData } = await supabase
-                    .from('flags')
-                    .select('*')
-                    .eq('session_id', sessionId)
-                    .order('timestamp', { ascending: false });
-
-                setFlags(flagData || []);
+                setFlags(data.flags || []);
             }
         } catch (err) { console.error(err); }
         setLoading(false);
@@ -88,39 +61,16 @@ export default function StudentTestResult() {
 
     const handleReview = async () => {
         if (!selectedFlag) return;
-
-        // Update flag status
-        await supabase.from('flags').update({
-            reviewed: true,
-            review_action: reviewAction,
-            review_notes: reviewNotes,
-        }).eq('id', selectedFlag.id);
-
-        // Handle Exam Invalidation
+        await api.patch(`/api/flags/${selectedFlag.id}`, {
+            reviewed: true, review_action: reviewAction, review_notes: reviewNotes,
+        });
         if (reviewAction === 'invalidate' && isAdmin) {
-            await supabase.from('exam_sessions').update({
-                status: 'invalidated',
-                score: 0,
-                ended_at: new Date().toISOString()
-            }).eq('id', selectedFlag.session_id);
-
-            // Create audit log
-            await supabase.from('audit_logs').insert({
-                action: 'EXAM_INVALIDATED',
-                user_id: user.id,
-                details: {
-                    session_id: selectedFlag.session_id,
-                    reason: reviewNotes,
-                    flag_id: selectedFlag.id
-                }
+            await api.patch(`/api/sessions/${selectedFlag.session_id}`, {
+                status: 'invalidated', score: 0, ended_at: new Date().toISOString(),
             });
         }
-
-        setReviewOpen(false);
-        setSelectedFlag(null);
-        setReviewAction('');
-        setReviewNotes('');
-        loadResult(); // Reload to get updated flags
+        setReviewOpen(false); setSelectedFlag(null); setReviewAction(''); setReviewNotes('');
+        loadResult();
     };
 
     if (loading) return <LinearProgress />;
@@ -208,7 +158,7 @@ export default function StudentTestResult() {
                         <Chip label="RESULT INVALIDATED" color="error" sx={{ fontSize: '1.2rem', py: 2, px: 1, fontWeight: 'bold' }} />
                     ) : (
                         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                            <Button variant="contained" sx={{ bgcolor: '#6C63FF', color: 'white' }} startIcon={<AutoAwesome />} onClick={handleAIAdvisor}>
+                            <Button variant="contained" sx={{ bgcolor: '#D97706', color: 'white' }} startIcon={<AutoAwesome />} onClick={handleAIAdvisor}>
                                 AI Advisor
                             </Button>
                             <Chip label={`Score: ${session.score} / ${session.tests?.total_marks}`}
@@ -254,7 +204,7 @@ export default function StudentTestResult() {
                                 <CardContent sx={{ p: 0 }}>
                                     <Table size="small">
                                         <TableHead>
-                                            <TableRow sx={{ bgcolor: 'rgba(108,99,255,0.05)' }}>
+                                            <TableRow sx={{ bgcolor: 'rgba(217,119,6,0.05)' }}>
                                                 <TableCell sx={{ fontWeight: 700 }}>Type</TableCell>
                                                 <TableCell sx={{ fontWeight: 700 }}>Severity</TableCell>
                                                 <TableCell sx={{ fontWeight: 700 }}>Details</TableCell>
@@ -270,7 +220,7 @@ export default function StudentTestResult() {
                                                     key={f.id}
                                                     hover
                                                     sx={{
-                                                        borderLeft: (f.severity === 'high' || f.severity === 'RED') ? '3px solid #FF4D6A' :
+                                                        borderLeft: (f.severity === 'high' || f.severity === 'RED') ? '3px solid #B45309' :
                                                             (f.severity === 'medium' || f.severity === 'ORANGE' || f.severity === 'YELLOW') ? '3px solid #FF9800' : '3px solid #ccc'
                                                     }}
                                                 >
@@ -332,7 +282,7 @@ export default function StudentTestResult() {
                                             {flags.length === 0 && (
                                                 <TableRow>
                                                     <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
-                                                        <CheckCircle sx={{ fontSize: 48, color: '#4ECDC4', mb: 1, opacity: 0.8 }} />
+                                                        <CheckCircle sx={{ fontSize: 48, color: '#0284C7', mb: 1, opacity: 0.8 }} />
                                                         <Typography variant="body2" color="text.secondary">
                                                             No flags recorded for this session.
                                                         </Typography>
@@ -363,7 +313,7 @@ export default function StudentTestResult() {
                                     const isCorrect = !isSkipped && JSON.stringify(userAnsArray.sort()) === JSON.stringify(correctArray.sort());
 
                                     return (
-                                        <Card key={q.id} sx={{ mb: 2, borderLeft: isCorrect ? '4px solid #4ECDC4' : isSkipped ? '4px solid #FFB74D' : '4px solid #FF4D6A' }}>
+                                        <Card key={q.id} sx={{ mb: 2, borderLeft: isCorrect ? '4px solid #0284C7' : isSkipped ? '4px solid #78350F' : '4px solid #B45309' }}>
                                             <CardContent>
                                                 <Box sx={{ display: 'flex', gap: 2 }}>
                                                     <Box sx={{ mt: 0.5 }}>
@@ -406,7 +356,7 @@ export default function StudentTestResult() {
                 </DialogTitle>
                 <DialogContent>
                     {/* Flag Details */}
-                    <Paper sx={{ p: 2, mb: 2, bgcolor: 'rgba(108,99,255,0.03)', borderRadius: 2 }}>
+                    <Paper sx={{ p: 2, mb: 2, bgcolor: 'rgba(217,119,6,0.03)', borderRadius: 2 }}>
                         <Grid container spacing={2}>
                             <Grid size={{ xs: 6 }}>
                                 <Typography variant="body2"><strong>Type:</strong> {selectedFlag?.type || selectedFlag?.flag_type}</Typography>
@@ -496,12 +446,12 @@ export default function StudentTestResult() {
             {/* AI Advisor Dialog */}
             <Dialog open={advisorOpen} onClose={() => setAdvisorOpen(false)} maxWidth="md" fullWidth>
                 <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <AutoAwesome sx={{ color: '#6C63FF' }} /> AI Study Advisor
+                    <AutoAwesome sx={{ color: '#D97706' }} /> AI Study Advisor
                 </DialogTitle>
                 <DialogContent dividers sx={{ minHeight: '300px' }}>
                     {advisorLoading ? (
                         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', mt: 4 }}>
-                            <CircularProgress sx={{ mb: 2, color: '#6C63FF' }} />
+                            <CircularProgress sx={{ mb: 2, color: '#D97706' }} />
                             <Typography>Analyzing your test performance...</Typography>
                         </Box>
                     ) : (

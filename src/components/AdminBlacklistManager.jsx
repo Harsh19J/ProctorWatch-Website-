@@ -7,7 +7,7 @@ import {
     CircularProgress, Tooltip, Select, MenuItem, FormControl, InputLabel
 } from '@mui/material';
 import { Add, Delete, Search, Shield, Block, CheckCircle, Refresh } from '@mui/icons-material';
-import { supabase } from '../lib/supabase';
+import api from '../lib/api';
 
 // Category display config — now includes all 11 categories
 const CATEGORY_CONFIG = {
@@ -35,17 +35,11 @@ export default function AdminBlacklistManager() {
     const [saving, setSaving] = useState(null);   // process_name of row being saved
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-    // ─── Load from Supabase ───────────────────────────────────────────────────
+    // ─── Load from API ───────────────────────────────────────────────────
     const loadApps = useCallback(async () => {
         setLoading(true);
         try {
-            const { data, error } = await supabase
-                .from('app_blacklist')
-                .select('*')
-                .order('category')
-                .order('display_name');
-
-            if (error) throw error;
+            const data = await api.get('/api/blacklist');
             setApps(data || []);
         } catch (err) {
             console.error('Failed to load blacklist:', err);
@@ -68,33 +62,16 @@ export default function AdminBlacklistManager() {
         ));
 
         try {
-            const { error } = await supabase
-                .from('app_blacklist')
-                .update({ is_whitelisted: newVal })
-                .eq('process_name', app.process_name);
-
-            if (error) throw error;
-
-            // Sync to Electron enforcement at runtime if available
+            await api.patch(`/api/blacklist/${encodeURIComponent(app.process_name)}`, { is_whitelisted: newVal });
             if (window.electronAPI?.setWhitelist) {
                 const whitelisted = apps
                     .filter(a => (a.process_name === app.process_name ? newVal : a.is_whitelisted))
                     .map(a => a.process_name);
                 await window.electronAPI.setWhitelist(whitelisted);
             }
-
-            setSnackbar({
-                open: true,
-                message: newVal
-                    ? `${app.display_name} is now ALLOWED (whitelisted)`
-                    : `${app.display_name} is now BLOCKED`,
-                severity: newVal ? 'success' : 'warning'
-            });
+            setSnackbar({ open: true, message: newVal ? `${app.display_name} is now ALLOWED (whitelisted)` : `${app.display_name} is now BLOCKED`, severity: newVal ? 'success' : 'warning' });
         } catch (err) {
-            // Rollback optimistic update
-            setApps(prev => prev.map(a =>
-                a.process_name === app.process_name ? { ...a, is_whitelisted: !newVal } : a
-            ));
+            setApps(prev => prev.map(a => a.process_name === app.process_name ? { ...a, is_whitelisted: !newVal } : a));
             setSnackbar({ open: true, message: `Failed to update: ${err.message}`, severity: 'error' });
         }
 
@@ -113,27 +90,12 @@ export default function AdminBlacklistManager() {
 
         setSaving('__adding__');
         try {
-            const { data, error } = await supabase
-                .from('app_blacklist')
-                .insert({
-                    process_name: processName,
-                    display_name: displayName,
-                    category: newApp.category,
-                    is_default: false,
-                    is_whitelisted: false,
-                })
-                .select()
-                .single();
-
-            if (error) throw error;
-
+            const data = await api.post('/api/blacklist', {
+                process_name: processName, display_name: displayName,
+                category: newApp.category, is_default: false, is_whitelisted: false,
+            });
             setApps(prev => [...prev, data]);
-
-            // Also push to Electron
-            if (window.electronAPI?.addToBlacklist) {
-                await window.electronAPI.addToBlacklist(processName);
-            }
-
+            if (window.electronAPI?.addToBlacklist) await window.electronAPI.addToBlacklist(processName);
             setNewApp({ name: '', displayName: '', category: 'custom' });
             setAddDialogOpen(false);
             setSnackbar({ open: true, message: `${processName} added to blacklist`, severity: 'success' });
@@ -147,19 +109,9 @@ export default function AdminBlacklistManager() {
     const handleRemoveApp = async (app) => {
         setSaving(app.process_name);
         try {
-            const { error } = await supabase
-                .from('app_blacklist')
-                .delete()
-                .eq('process_name', app.process_name);
-
-            if (error) throw error;
-
+            await api.del(`/api/blacklist/${encodeURIComponent(app.process_name)}`);
             setApps(prev => prev.filter(a => a.process_name !== app.process_name));
-
-            if (window.electronAPI?.removeFromBlacklist) {
-                await window.electronAPI.removeFromBlacklist(app.process_name);
-            }
-
+            if (window.electronAPI?.removeFromBlacklist) await window.electronAPI.removeFromBlacklist(app.process_name);
             setSnackbar({ open: true, message: `${app.process_name} removed`, severity: 'info' });
         } catch (err) {
             setSnackbar({ open: true, message: `Failed to remove: ${err.message}`, severity: 'error' });

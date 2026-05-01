@@ -1,13 +1,5 @@
 import { create } from 'zustand';
-import { supabase } from '../lib/supabase';
-
-async function hashPassword(password) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(password);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
+import api from '../lib/api';
 
 const useAuthStore = create((set, get) => ({
     user: null,
@@ -32,59 +24,24 @@ const useAuthStore = create((set, get) => ({
     login: async (username, password) => {
         set({ loading: true, error: null });
         try {
-            const passwordHash = await hashPassword(password);
-            const { data: users, error } = await supabase
-                .from('users')
-                .select('*')
-                .eq('username', username)
-                .eq('is_active', true)
-                .limit(1);
-
-            if (error) throw error;
-            if (!users || users.length === 0) throw new Error('Invalid username or password');
-
-            const user = users[0];
-            if (user.password_hash !== passwordHash) throw new Error('Invalid username or password');
+            const data = await api.post('/api/auth/login', { username, password });
 
             const session = {
-                user: {
-                    id: user.id,
-                    email: user.email,
-                    username: user.username,
-                    full_name: user.full_name,
-                    role: user.role,
-                    phone: user.phone,
-                    profile_photo_url: user.profile_photo_url,
-                    first_login: user.first_login,
-                },
-                token: btoa(JSON.stringify({ id: user.id, role: user.role, ts: Date.now() })),
+                user: data.user,
+                token: data.token,
             };
 
             localStorage.setItem('pw_session', JSON.stringify(session));
-
-            await supabase.from('audit_logs').insert({
-                action: 'LOGIN',
-                user_id: user.id,
-                details: { username, role: user.role, source: 'web' },
-            });
-
-            set({ user: session.user, session, loading: false });
+            set({ user: data.user, session, loading: false });
             return session;
         } catch (err) {
-            set({ loading: false, error: err.message });
+            set({ loading: false, error: err.data?.error || err.message });
             throw err;
         }
     },
 
     logout: async () => {
-        const { user } = get();
-        if (user) {
-            await supabase.from('audit_logs').insert({
-                action: 'LOGOUT',
-                user_id: user.id,
-                details: { username: user.username, source: 'web' },
-            });
-        }
+        try { await api.post('/api/auth/logout', {}); } catch { /* ignore */ }
         localStorage.removeItem('pw_session');
         set({ user: null, session: null, error: null });
     },
@@ -92,26 +49,22 @@ const useAuthStore = create((set, get) => ({
     changePassword: async (currentPassword, newPassword) => {
         const { user } = get();
         if (!user) throw new Error('Not logged in');
-        const currentHash = await hashPassword(currentPassword);
-        const newHash = await hashPassword(newPassword);
-        const { data: users } = await supabase.from('users').select('password_hash').eq('id', user.id).limit(1);
-        if (!users || users[0].password_hash !== currentHash) throw new Error('Current password is incorrect');
-        const { error } = await supabase.from('users').update({ password_hash: newHash, first_login: false, updated_at: new Date().toISOString() }).eq('id', user.id);
-        if (error) throw error;
+        await api.post('/api/auth/change-password', { currentPassword, newPassword });
+
+        // Update local session
         set({ user: { ...user, first_login: false } });
         const stored = JSON.parse(localStorage.getItem('pw_session'));
         stored.user.first_login = false;
         localStorage.setItem('pw_session', JSON.stringify(stored));
-        await supabase.from('audit_logs').insert({ action: 'PASSWORD_CHANGE', user_id: user.id, details: { first_login_change: true } });
     },
 
     verifyAdmin: async (username, password) => {
-        const passwordHash = await hashPassword(password);
-        const { data: users } = await supabase.from('users').select('id, role').eq('username', username).eq('is_active', true).in('role', ['admin', 'technical']).limit(1);
-        if (!users || users.length === 0) return null;
-        const { data: fullUser } = await supabase.from('users').select('password_hash').eq('id', users[0].id).limit(1);
-        if (fullUser && fullUser[0].password_hash === passwordHash) return users[0];
-        return null;
+        try {
+            const data = await api.post('/api/auth/verify-admin', { username, password });
+            return data; // { id, role }
+        } catch {
+            return null;
+        }
     },
 
     clearError: () => set({ error: null }),

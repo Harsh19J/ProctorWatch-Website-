@@ -52,14 +52,14 @@ export default function ParentDashboard() {
 
     const loadChildren = async () => {
         try {
-            const meData = await api.get('/api/users/me');
-            const childIds = meData.children || [];
-            if (childIds.length === 0) { setLoading(false); return; }
-            const allUsers = await api.get('/api/users');
-            const kids = allUsers.filter(u => childIds.includes(u.id));
-            setChildren(kids);
-            if (kids.length > 0) { setSelectedChild(kids[0]); await loadChildData(kids[0].id); }
-        } catch (err) { console.error(err); }
+            // Use dedicated endpoint — no admin required
+            const kids = await api.get('/api/users/my-children');
+            setChildren(kids || []);
+            if (kids && kids.length > 0) {
+                setSelectedChild(kids[0]);
+                await loadChildData(kids[0].id);
+            }
+        } catch (err) { console.error('[ParentDashboard] loadChildren:', err); }
         setLoading(false);
     };
 
@@ -121,22 +121,58 @@ export default function ParentDashboard() {
 
                     {childData && (
                         <Grid container spacing={3}>
-                            {/* Stats */}
-                            <Grid item xs={6} sm={3}>
+                            {/* Stats — 4 cards full width */}
+                            <Grid size={{ xs: 6, sm: 3 }}>
                                 <MetricCard value={childData.avgScore} label="Avg Score" icon={<TrendingUp />} color="#D97706" delay={0.05} />
                             </Grid>
-                            <Grid item xs={6} sm={3}>
+                            <Grid size={{ xs: 6, sm: 3 }}>
                                 <MetricCard value={childData.integrityScore} label="Integrity" icon={<CheckCircle />} color="#0284C7" delay={0.11} />
                             </Grid>
-                            <Grid item xs={6} sm={3}>
+                            <Grid size={{ xs: 6, sm: 3 }}>
                                 <MetricCard value={childData.attendance} label="Attendance" icon={<Person />} color="#FBBF24" delay={0.17} />
                             </Grid>
-                            <Grid item xs={6} sm={3}>
+                            <Grid size={{ xs: 6, sm: 3 }}>
                                 <MetricCard value={childData.sessions.length} label="Exams Taken" icon={<Warning />} color="#78350F" delay={0.23} />
                             </Grid>
 
+                            {/* Child Profile Summary */}
+                            <Grid size={{ xs: 12, md: 4 }} sx={{ animation: 'fadeSlideRight 0.5s ease 0.2s both' }}>
+                                <Card sx={{ height: '100%', background: 'linear-gradient(135deg, rgba(217,119,6,0.06), rgba(251,191,36,0.03))' }}>
+                                    <CardContent sx={{ p: 3, textAlign: 'center' }}>
+                                        <Avatar sx={{
+                                            width: 72, height: 72, mx: 'auto', mb: 2,
+                                            fontSize: '1.8rem', fontWeight: 800,
+                                            bgcolor: 'rgba(217,119,6,0.15)', color: '#D97706',
+                                            border: '3px solid rgba(217,119,6,0.25)',
+                                        }}>
+                                            {(selectedChild?.full_name || selectedChild?.username || 'S')[0].toUpperCase()}
+                                        </Avatar>
+                                        <Typography variant="h6" fontWeight={800} sx={{ mb: 0.5 }}>
+                                            {selectedChild?.full_name || selectedChild?.username}
+                                        </Typography>
+                                        <Chip label="Student" size="small" sx={{ bgcolor: 'rgba(2,132,199,0.1)', color: '#0284C7', fontWeight: 600, mb: 2 }} />
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, textAlign: 'left' }}>
+                                            {selectedChild?.email && (
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', p: 1.5, borderRadius: 2, bgcolor: 'action.hover' }}>
+                                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>Email</Typography>
+                                                    <Typography variant="caption" fontWeight={600} sx={{ maxWidth: 140, textAlign: 'right', wordBreak: 'break-all' }}>{selectedChild.email}</Typography>
+                                                </Box>
+                                            )}
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', p: 1.5, borderRadius: 2, bgcolor: 'action.hover' }}>
+                                                <Typography variant="caption" color="text.secondary" fontWeight={600}>Exams Done</Typography>
+                                                <Typography variant="caption" fontWeight={700} color="#D97706">{childData.sessions.length}</Typography>
+                                            </Box>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', p: 1.5, borderRadius: 2, bgcolor: 'action.hover' }}>
+                                                <Typography variant="caption" color="text.secondary" fontWeight={600}>Avg Score</Typography>
+                                                <Typography variant="caption" fontWeight={700} color="#0284C7">{childData.avgScore}%</Typography>
+                                            </Box>
+                                        </Box>
+                                    </CardContent>
+                                </Card>
+                            </Grid>
+
                             {/* Upcoming Exams */}
-                            <Grid item xs={12} md={6} sx={{ animation: 'fadeSlideRight 0.5s ease 0.25s both' }}>
+                            <Grid size={{ xs: 12, md: 4 }} sx={{ animation: 'fadeSlideUp 0.5s ease 0.25s both' }}>
                                 <Card sx={{ height: '100%' }}>
                                     <CardContent sx={{ p: 3 }}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
@@ -147,7 +183,7 @@ export default function ParentDashboard() {
                                         </Box>
                                         {childData.upcomingExams.length === 0 ? (
                                             <Box sx={{ textAlign: 'center', py: 4 }}>
-                                                <CalendarMonth sx={{ fontSize: 48, color: 'text.secondary', mb: 1, animation: 'pulseDot 2s ease-in-out infinite' }} />
+                                                <CalendarMonth sx={{ fontSize: 44, color: 'text.secondary', mb: 1, animation: 'pulseDot 2s ease-in-out infinite' }} />
                                                 <Typography color="text.secondary" variant="body2">No upcoming exams</Typography>
                                             </Box>
                                         ) : (
@@ -171,22 +207,24 @@ export default function ParentDashboard() {
                                 </Card>
                             </Grid>
 
-                            {/* Teacher Contacts */}
-                            <Grid item xs={12} md={6} sx={{ animation: 'fadeSlideLeft 0.5s ease 0.3s both' }}>
+                            {/* Teacher Contacts / Recent Exams */}
+                            <Grid size={{ xs: 12, md: 4 }} sx={{ animation: 'fadeSlideLeft 0.5s ease 0.3s both' }}>
                                 <Card sx={{ height: '100%' }}>
                                     <CardContent sx={{ p: 3 }}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
                                             <Box sx={{ p: 1, borderRadius: '10px', bgcolor: 'rgba(251,191,36,0.1)', color: '#FBBF24', display: 'flex' }}>
                                                 <ContactMail sx={{ fontSize: 20 }} />
                                             </Box>
-                                            <Typography variant="h6" fontWeight={700}>Teacher Contacts</Typography>
+                                            <Typography variant="h6" fontWeight={700}>
+                                                {childData.teachers.length > 0 ? 'Teacher Contacts' : 'Recent Exams'}
+                                            </Typography>
                                         </Box>
-                                        {childData.teachers.length === 0 ? (
+                                        {childData.teachers.length === 0 && childData.sessions.length === 0 ? (
                                             <Box sx={{ textAlign: 'center', py: 4 }}>
-                                                <ContactMail sx={{ fontSize: 48, color: 'text.secondary', mb: 1, animation: 'pulseDot 2s ease-in-out infinite' }} />
-                                                <Typography color="text.secondary" variant="body2">No teacher contacts available</Typography>
+                                                <ContactMail sx={{ fontSize: 44, color: 'text.secondary', mb: 1, animation: 'pulseDot 2s ease-in-out infinite' }} />
+                                                <Typography color="text.secondary" variant="body2">No data available yet</Typography>
                                             </Box>
-                                        ) : (
+                                        ) : childData.teachers.length > 0 ? (
                                             <List disablePadding>
                                                 {childData.teachers.map((tc, i) => (
                                                     <ListItem key={i} sx={{ px: 0, transition: 'all 180ms ease', borderRadius: 2, '&:hover': { bgcolor: 'action.hover', px: 1 } }}>
@@ -202,6 +240,34 @@ export default function ParentDashboard() {
                                                     </ListItem>
                                                 ))}
                                             </List>
+                                        ) : (
+                                            // Show recent exam sessions when no teachers
+                                            <Box>
+                                                {childData.sessions.slice(0, 5).map((s, idx) => (
+                                                    <Box key={s.id} sx={{
+                                                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                                        p: 1.5, mb: 1, borderRadius: 2, bgcolor: 'action.hover',
+                                                        border: '1px solid', borderColor: 'divider',
+                                                        animation: `fadeSlideUp 0.38s ease ${idx * 0.06}s both`,
+                                                    }}>
+                                                        <Box>
+                                                            <Typography variant="body2" fontWeight={600} noWrap sx={{ maxWidth: 120 }}>
+                                                                {s.test?.title || 'Exam'}
+                                                            </Typography>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                {s.ended_at ? new Date(s.ended_at).toLocaleDateString() : '—'}
+                                                            </Typography>
+                                                        </Box>
+                                                        <Chip
+                                                            label={s.status === 'completed' ? `${s.score ?? 0}` : s.status}
+                                                            size="small"
+                                                            color={s.status === 'completed' ? 'success' : s.status === 'invalidated' ? 'error' : 'default'}
+                                                            variant="outlined"
+                                                            sx={{ fontSize: '0.7rem', fontWeight: 700 }}
+                                                        />
+                                                    </Box>
+                                                ))}
+                                            </Box>
                                         )}
                                     </CardContent>
                                 </Card>

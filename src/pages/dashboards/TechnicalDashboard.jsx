@@ -32,7 +32,7 @@ erDiagram
 `;
 
 // System stat card
-function SysCard({ icon, color, value, label, delay = 0 }) {
+function SysCard({ icon, color, value, label, sub, delay = 0 }) {
     return (
         <Card sx={{
             height: '100%',
@@ -56,6 +56,11 @@ function SysCard({ icon, color, value, label, delay = 0 }) {
                     sx={{ textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: '0.7rem', display: 'block', mt: 0.5 }}>
                     {label}
                 </Typography>
+                {sub && (
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25, fontSize: '0.65rem', opacity: 0.75 }}>
+                        {sub}
+                    </Typography>
+                )}
             </CardContent>
         </Card>
     );
@@ -88,7 +93,10 @@ export default function TechnicalDashboard() {
 
     const loadData = async () => {
         try {
-            if (window.electronAPI) {
+            // Fetch real server system info (works in web, not just Electron)
+            const sysInfo = await api.get('/api/reports/system-info').catch(() => null);
+            if (sysInfo) setSystemInfo(sysInfo);
+            else if (window.electronAPI) {
                 const info = await window.electronAPI.getSystemInfo();
                 setSystemInfo(info);
             }
@@ -156,16 +164,33 @@ export default function TechnicalDashboard() {
             {tab === 0 && (
                 <Grid container spacing={3}>
                     {[
-                        { icon: <Memory />, color: '#D97706', value: systemInfo?.cpus || '—', label: 'CPU Cores' },
-                        { icon: <Speed />, color: '#FBBF24', value: systemInfo?.totalMemory ? `${systemInfo.totalMemory} GB` : '—', label: 'Total RAM' },
-                        { icon: <Storage />, color: '#0284C7', value: systemInfo?.freeMemory ? `${systemInfo.freeMemory} GB` : '—', label: 'Free RAM' },
-                        { icon: <BugReport />, color: '#78350F', value: systemInfo?.platform || 'web', label: 'Platform' },
+                        { icon: <Memory />, color: '#D97706', value: systemInfo?.cpus ? `${systemInfo.cpus} cores` : '—', label: 'CPU Cores', sub: systemInfo?.cpuModel?.split(' ').slice(0,3).join(' ') || 'Unknown' },
+                        { icon: <Speed />, color: '#FBBF24', value: systemInfo?.totalMemoryGB ? `${systemInfo.totalMemoryGB} GB` : '—', label: 'Total RAM', sub: `${systemInfo?.freeMemoryGB || '—'} GB free` },
+                        { icon: <Storage />, color: '#0284C7', value: systemInfo?.heapUsedMB ? `${systemInfo.heapUsedMB} MB` : '—', label: 'Heap Used', sub: `of ${systemInfo?.heapTotalMB || '—'} MB total` },
+                        { icon: <BugReport />, color: '#78350F', value: systemInfo?.platform || 'web', label: 'Platform', sub: systemInfo?.nodeVersion || 'Node.js' },
                     ].map((s, i) => (
-                        <Grid key={i} item xs={12} sm={6} md={3}>
+                        <Grid key={i} size={{ xs: 12, sm: 6, md: 3 }}>
                             <SysCard {...s} delay={i * 0.07} />
                         </Grid>
                     ))}
-                    <Grid item xs={12} sx={{ animation: 'fadeSlideUp 0.5s ease 0.2s both' }}>
+                    {/* Uptime + Node info strip */}
+                    {systemInfo?.uptime && (
+                        <Grid size={{ xs: 12 }} sx={{ animation: 'fadeSlideUp 0.4s ease 0.2s both' }}>
+                            <Card sx={{ bgcolor: 'rgba(217,119,6,0.04)', border: '1px solid rgba(217,119,6,0.15)' }}>
+                                <CardContent sx={{ p: 2, display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#22c55e', animation: 'pulseDot 1.5s ease-in-out infinite' }} />
+                                        <Typography variant="body2" fontWeight={600} color="#22c55e">Server Online</Typography>
+                                    </Box>
+                                    <Typography variant="body2" color="text.secondary">Uptime: <b>{Math.floor(systemInfo.uptime / 60)}m {systemInfo.uptime % 60}s</b></Typography>
+                                    <Typography variant="body2" color="text.secondary">Node: <b>{systemInfo.nodeVersion}</b></Typography>
+                                    <Typography variant="body2" color="text.secondary">Arch: <b>{systemInfo.arch}</b></Typography>
+                                    <Typography variant="body2" color="text.secondary">API: <b>http://localhost:4000</b></Typography>
+                                </CardContent>
+                            </Card>
+                        </Grid>
+                    )}
+                    <Grid size={{ xs: 12 }} sx={{ animation: 'fadeSlideUp 0.5s ease 0.2s both' }}>
                         <Card>
                             <CardContent sx={{ p: 3 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>

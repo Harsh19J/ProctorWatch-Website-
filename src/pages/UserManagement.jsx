@@ -4,7 +4,7 @@ import {
     DialogContent, DialogActions, Table, TableHead, TableRow, TableCell, TableBody,
     Chip, IconButton, MenuItem, Alert, LinearProgress, Tooltip, Avatar, Divider, Tabs, Tab,
 } from '@mui/material';
-import { PersonAdd, Upload, Edit, Block, CheckCircle, Search, Download, FamilyRestroom, School } from '@mui/icons-material';
+import { PersonAdd, Upload, Block, CheckCircle, Search, Download, FamilyRestroom, School, Link } from '@mui/icons-material';
 import api from '../lib/api';
 import useAuthStore from '../store/authStore';
 
@@ -22,6 +22,10 @@ export default function UserManagement() {
     const [error, setError] = useState('');
     const fileRef = useRef();
     const [form, setForm] = useState({ ...emptyForm });
+    const [linkOpen, setLinkOpen] = useState(false);
+    const [linkForm, setLinkForm] = useState({ parent_id: '', student_id: '' });
+    const [linkError, setLinkError] = useState('');
+    const [linkSuccess, setLinkSuccess] = useState('');
 
     const canManage = ['admin', 'technical'].includes(currentUser?.role);
 
@@ -125,6 +129,28 @@ export default function UserManagement() {
             setForm({ ...emptyForm });
             loadUsers();
         } catch (err) { setError(err.message); }
+    };
+
+    const handleLink = async () => {
+        setLinkError('');
+        setLinkSuccess('');
+        if (!linkForm.parent_id || !linkForm.student_id) {
+            setLinkError('Please select both a parent and a student.');
+            return;
+        }
+        if (linkForm.parent_id === linkForm.student_id) {
+            setLinkError('Parent and student cannot be the same account.');
+            return;
+        }
+        try {
+            await api.post('/api/users/parent-student', {
+                parent_id: linkForm.parent_id,
+                student_id: linkForm.student_id,
+            });
+            setLinkSuccess('✅ Parent and student linked successfully!');
+            setLinkForm({ parent_id: '', student_id: '' });
+            loadUsers();
+        } catch (err) { setLinkError(err.message); }
     };
 
     // General CSV handler (teachers, parents, admins, etc.)
@@ -240,6 +266,7 @@ export default function UserManagement() {
                 {canManage && (
                     <Box sx={{ display: 'flex', gap: 1 }}>
                         <Button variant="contained" startIcon={<PersonAdd />} onClick={() => setOpen(true)}>Add User</Button>
+                        <Button variant="outlined" startIcon={<Link />} onClick={() => { setLinkOpen(true); setLinkError(''); setLinkSuccess(''); }}>Link Parent</Button>
                         <Button variant="outlined" startIcon={<Upload />} onClick={() => setCsvOpen(true)}>CSV Upload</Button>
                     </Box>
                 )}
@@ -327,6 +354,48 @@ export default function UserManagement() {
                 <DialogActions>
                     <Button onClick={() => setOpen(false)}>Cancel</Button>
                     <Button variant="contained" onClick={handleCreate}>Create</Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Link Parent ↔ Student Dialog */}
+            <Dialog open={linkOpen} onClose={() => setLinkOpen(false)} maxWidth="sm" fullWidth>
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <FamilyRestroom color="primary" /> Link Parent ↔ Student
+                </DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
+                        Use this to connect an existing parent account to an existing student account.
+                        The student will then appear on the parent's dashboard.
+                    </Typography>
+                    {linkError && <Alert severity="error" sx={{ mb: 2 }}>{linkError}</Alert>}
+                    {linkSuccess && <Alert severity="success" sx={{ mb: 2 }}>{linkSuccess}</Alert>}
+                    <TextField
+                        fullWidth select label="Parent Account" value={linkForm.parent_id}
+                        onChange={e => setLinkForm({ ...linkForm, parent_id: e.target.value })}
+                        sx={{ mb: 2, mt: 1 }}
+                        helperText="Select the parent user to link"
+                    >
+                        {users.filter(u => u.role === 'parent').map(u => (
+                            <MenuItem key={u.id} value={u.id}>
+                                {u.full_name || u.username} — {u.email}
+                            </MenuItem>
+                        ))}
+                    </TextField>
+                    <TextField
+                        fullWidth select label="Student Account" value={linkForm.student_id}
+                        onChange={e => setLinkForm({ ...linkForm, student_id: e.target.value })}
+                        helperText="Select the student to link to this parent"
+                    >
+                        {users.filter(u => u.role === 'student').map(u => (
+                            <MenuItem key={u.id} value={u.id}>
+                                {u.full_name || u.username} — {u.email}
+                            </MenuItem>
+                        ))}
+                    </TextField>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setLinkOpen(false)}>Cancel</Button>
+                    <Button variant="contained" startIcon={<Link />} onClick={handleLink}>Link Accounts</Button>
                 </DialogActions>
             </Dialog>
 

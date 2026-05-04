@@ -208,6 +208,8 @@ function Reveal({ children, animation = 'fadeSlideUp', delay = 0, threshold = 0.
         <Box ref={ref} sx={{
             opacity: visible ? 1 : 0,
             animation: visible ? `${animation} 0.65s cubic-bezier(0.22,1,0.36,1) ${delay}s both` : 'none',
+            height: '100%',
+            width: '100%'
         }}>
             {children}
         </Box>
@@ -264,7 +266,7 @@ function FramedImage({ src, alt, glowColor = '#D97706', floatAnim = false, revea
 function SectionHeader({ chip, chipColor = '#D97706', title, highlight, after = '', subtitle }) {
     return (
         <Reveal animation="fadeSlideUp">
-            <Box sx={{ textAlign: 'center', mb: 8 }}>
+            <Box sx={{ textAlign: 'center', mb: 6 }}>
                 <Chip label={chip} sx={{
                     mb: 2.5, bgcolor: `${chipColor}15`, color: chipColor,
                     fontWeight: 700, border: `1px solid ${chipColor}30`,
@@ -631,7 +633,7 @@ export default function LandingPage() {
 
                 <Container maxWidth="xl" sx={{ position: 'relative', zIndex: 1, py: { xs: 8, md: 4 } }}>
                     <Grid container spacing={6} alignItems="center">
-                        <Grid item xs={12} md={5}>
+                        <Grid size={{ xs: 12, md: 5 }}>
                             {/* Badge */}
                             <Box sx={{ animation: 'fadeSlideRight 0.65s cubic-bezier(0.22,1,0.36,1) 0.1s both' }}>
                                 <Chip
@@ -768,56 +770,60 @@ export default function LandingPage() {
                 </Box>
 
             {/* ═══ FEATURES ════════════════════════════════════════════════════ */}
-            <Box id="features" sx={{ py: 14 }}>
+            <Box id="features" sx={{ py: { xs: 8, md: 10 } }}>
                 <Container maxWidth="xl">
                     <SectionHeader chip="Core Features" chipColor="#D97706" title="Everything You Need for " highlight="Secure Exams" subtitle="A full suite of AI-driven tools designed for modern educational institutions — from biometric verification to deep analytics." />
 
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center' }}>
+                    <Grid container spacing={3} justifyContent="center" alignItems="stretch">
                         {FEATURES.map((f, i) => (
-                            <Box key={i} sx={{ width: '100%', maxWidth: 860 }}>
-                                <Reveal animation="flipIn" delay={0.15}>
-                                    <Card sx={{
-                                        bgcolor: isDark ? 'rgba(15,17,23,0.55)' : 'rgba(255,255,255,0.7)',
-                                        backdropFilter: 'blur(16px)',
-                                        border: `1px solid ${border}`, borderRadius: 4,
-                                        p: 1, cursor: 'default',
-                                        transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                                        '&:hover': {
-                                            transform: 'translateY(-8px) scale(1.02) rotateX(2deg)',
-                                            borderColor: `${f.color}55`,
-                                            boxShadow: `0 32px 64px ${f.color}25`,
-                                            bgcolor: isDark ? 'rgba(15,17,23,0.75)' : 'rgba(255,255,255,0.9)',
-                                        },
-                                    }}>
-                                        <CardContent sx={{ p: { xs: 3, md: 4 }, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: { xs: 'flex-start', md: 'center' }, gap: 4 }}>
-                                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: { xs: 'flex-start', md: 'center' }, gap: 2, minWidth: { md: 140 } }}>
-                                                <Box sx={{
-                                                    width: 64, height: 64, borderRadius: '16px',
-                                                    bgcolor: `${f.color}15`, border: `1px solid ${f.color}35`,
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                    color: f.color,
-                                                    transition: 'transform 0.3s, box-shadow 0.3s',
-                                                    '&:hover': { transform: 'rotate(10deg) scale(1.15)', boxShadow: `0 12px 28px ${f.color}40` },
-                                                }}>
-                                                    {/* cloneElement to make icon larger */}
-                                                    {cloneElement(f.icon, { sx: { fontSize: 32 } })}
+                            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={i} sx={{ display: 'flex' }}>
+                                <Box sx={{ width: '100%', height: '100%' }}>
+                                    <Reveal animation="flipIn" delay={0.15}>
+                                        <Card sx={{
+                                            bgcolor: isDark ? 'rgba(15,17,23,0.55)' : 'rgba(255,255,255,0.7)',
+                                            backdropFilter: 'blur(16px)',
+                                            border: `1px solid ${border}`, borderRadius: 4,
+                                            p: 1, cursor: 'default',
+                                            transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                                            '&:hover': {
+                                                transform: 'translateY(-8px) scale(1.02) rotateX(2deg)',
+                                                borderColor: `${f.color}55`,
+                                                boxShadow: `0 32px 64px ${f.color}25`,
+                                                bgcolor: isDark ? 'rgba(15,17,23,0.75)' : 'rgba(255,255,255,0.9)',
+                                            },
+                                            height: '100%',
+                                            display: 'flex',
+                                            flexDirection: 'column'
+                                        }}>
+                                            <CardContent sx={{ p: { xs: 3, md: 4 }, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 3, flexGrow: 1 }}>
+                                                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                                                    <Box sx={{
+                                                        width: 64, height: 64, borderRadius: '16px',
+                                                        bgcolor: `${f.color}15`, border: `1px solid ${f.color}35`,
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        color: f.color,
+                                                        transition: 'transform 0.3s, box-shadow 0.3s',
+                                                        '&:hover': { transform: 'rotate(10deg) scale(1.15)', boxShadow: `0 12px 28px ${f.color}40` },
+                                                    }}>
+                                                        {cloneElement(f.icon, { sx: { fontSize: 32 } })}
+                                                    </Box>
+                                                    <Chip label={f.tag} size="small" sx={{
+                                                        bgcolor: `${f.color}0D`, color: f.color,
+                                                        fontSize: '0.7rem', fontWeight: 700,
+                                                        border: `1px solid ${f.color}20`,
+                                                    }} />
                                                 </Box>
-                                                <Chip label={f.tag} size="small" sx={{
-                                                    bgcolor: `${f.color}0D`, color: f.color,
-                                                    fontSize: '0.7rem', fontWeight: 700,
-                                                    border: `1px solid ${f.color}20`,
-                                                }} />
-                                            </Box>
-                                            <Box sx={{ flex: 1 }}>
-                                                <Typography variant="h5" fontWeight={800} sx={{ mb: 1.5, letterSpacing: '-0.02em' }}>{f.title}</Typography>
-                                                <Typography variant="body1" color="text.secondary" sx={{ lineHeight: 1.8, fontSize: '1.05rem' }}>{f.desc}</Typography>
-                                            </Box>
-                                        </CardContent>
-                                    </Card>
-                                </Reveal>
-                            </Box>
+                                                <Box sx={{ flex: 1 }}>
+                                                    <Typography variant="h5" fontWeight={800} sx={{ mb: 1.5, letterSpacing: '-0.02em' }}>{f.title}</Typography>
+                                                    <Typography variant="body1" color="text.secondary" sx={{ lineHeight: 1.8, fontSize: '1.05rem' }}>{f.desc}</Typography>
+                                                </Box>
+                                            </CardContent>
+                                        </Card>
+                                    </Reveal>
+                                </Box>
+                            </Grid>
                         ))}
-                    </Box>
+                    </Grid>
                 </Container>
             </Box>
 
@@ -906,18 +912,18 @@ export default function LandingPage() {
             </Box>
 
             {/* ═══ HOW IT WORKS ════════════════════════════════════════════════ */}
-            <Box id="how-it-works" sx={{ py: 14 }}>
+            <Box id="how-it-works" sx={{ py: 10 }}>
                 <Container maxWidth="xl">
                     <SectionHeader chip="Workflow" chipColor="#FBBF24" title="How " highlight="ProctorWatch" after=" Works" subtitle="From first setup to post-exam review — three simple stages, each powered by AI." />
 
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         {HOW_STEPS.map((step, i) => (
-                            <Grid container spacing={7} key={i} alignItems="center" direction={i % 2 === 1 ? 'row-reverse' : 'row'}>
-                                <Grid item xs={12} md={4} sx={{ maxWidth: { xs: 600, md: 'none' }, mx: 'auto' }}>
+                            <Grid container spacing={6} key={i} alignItems="center" direction={i % 2 === 1 ? 'row-reverse' : 'row'}>
+                                <Grid size={{ xs: 12, md: 6 }} sx={{ maxWidth: { xs: 560, md: 'none' }, mx: 'auto' }}>
                                     <Reveal animation={i % 2 === 0 ? 'fadeSlideRight' : 'fadeSlideLeft'} delay={0.1}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2.5 }}>
                                             <Box sx={{
-                                                width: 52, height: 52, borderRadius: '14px',
+                                                width: 48, height: 48, borderRadius: '12px',
                                                 bgcolor: `${step.color}12`, border: `1px solid ${step.color}30`,
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                 color: step.color, flexShrink: 0,
@@ -926,30 +932,30 @@ export default function LandingPage() {
                                                 {step.icon}
                                             </Box>
                                             <Typography fontFamily="monospace" fontWeight={900} sx={{
-                                                fontSize: '2.2rem', color: `${step.color}50`,
+                                                fontSize: '2rem', color: `${step.color}50`,
                                                 letterSpacing: '-3px',
                                             }}>
                                                 {step.step}
                                             </Typography>
                                         </Box>
-                                        <Typography variant="h4" fontWeight={800} sx={{ mb: 2, letterSpacing: '-0.02em', lineHeight: 1.15 }}>
+                                        <Typography variant="h4" fontWeight={800} sx={{ mb: 1.5, letterSpacing: '-0.02em', lineHeight: 1.15 }}>
                                             {step.title}
                                         </Typography>
-                                        <Typography variant="body1" color="text.secondary" sx={{ mb: 4, lineHeight: 1.85 }}>
+                                        <Typography variant="body1" color="text.secondary" sx={{ mb: 3.5, lineHeight: 1.85 }}>
                                             {step.desc}
                                         </Typography>
-                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
                                             {step.bullets.map((b, j) => (
                                                 <Box key={j} sx={{
                                                     display: 'flex', alignItems: 'center', gap: 2,
                                                     animation: `fadeSlideRight 0.45s ease ${j * 0.08}s both`,
                                                 }}>
                                                     <Box sx={{
-                                                        width: 22, height: 22, borderRadius: '50%',
+                                                        width: 20, height: 20, borderRadius: '50%',
                                                         bgcolor: `${step.color}12`, border: `1px solid ${step.color}35`,
                                                         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                                                     }}>
-                                                        <CheckCircle sx={{ fontSize: 14, color: step.color }} />
+                                                        <CheckCircle sx={{ fontSize: 13, color: step.color }} />
                                                     </Box>
                                                     <Typography variant="body2" fontWeight={500}>{b}</Typography>
                                                 </Box>
@@ -957,8 +963,19 @@ export default function LandingPage() {
                                         </Box>
                                     </Reveal>
                                 </Grid>
-                                <Grid item xs={12} md={8}>
-                                    <FramedImage src={step.img} alt={step.imgAlt} glowColor={step.imgColor} />
+                                <Grid size={{ xs: 12, md: 5 }}>
+                                    <Box sx={{ maxWidth: 520, mx: 'auto' }}>
+                                        <Box sx={{
+                                            perspective: '1000px',
+                                            '& > div': {
+                                                transform: i % 2 === 0 ? 'rotateY(-5deg) rotateX(3deg)' : 'rotateY(5deg) rotateX(3deg)',
+                                                transition: 'transform 0.6s cubic-bezier(0.22,1,0.36,1)',
+                                                '&:hover': { transform: 'rotateY(0deg) rotateX(0deg)' }
+                                            }
+                                        }}>
+                                            <FramedImage src={step.img} alt={step.imgAlt} glowColor={step.imgColor} floatAnim={true} />
+                                        </Box>
+                                    </Box>
                                 </Grid>
                             </Grid>
                         ))}
@@ -1104,7 +1121,7 @@ export default function LandingPage() {
                             <SectionHeader chip="Pricing" chipColor="#78350F" title="Simple, " highlight="Transparent" after=" Pricing" subtitle="Choose the plan that fits your institution — no hidden fees." />
                             <Grid container spacing={3} justifyContent="center" alignItems="stretch">
                                 {PRICING.map((plan, i) => (
-                                    <Grid item xs={12} md={4} key={i}>
+                                    <Grid size={{ xs: 12, md: 4 }} key={i}>
                                         <Reveal animation="scaleIn" delay={i * 0.08}>
                                             <Card sx={{
                                                 bgcolor: cardBg, height: '100%',
@@ -1170,7 +1187,7 @@ export default function LandingPage() {
                         <Box sx={{ animation: 'fadeSlideUp 0.45s cubic-bezier(0.22,1,0.36,1) both' }}>
                             <SectionHeader chip="Contact" chipColor="#B45309" title="Let's " highlight="Talk" subtitle="Have questions about ProctorWatch? Our team is here to help." />
                             <Grid container spacing={5} alignItems="flex-start">
-                                <Grid item xs={12} md={4}>
+                                <Grid size={{ xs: 12, md: 4 }}>
                                     <Reveal animation="fadeSlideRight" delay={0.1}>
                                         <Typography variant="h6" fontWeight={700} sx={{ mb: 3 }}>Get in Touch</Typography>
                                         {[
@@ -1209,7 +1226,7 @@ export default function LandingPage() {
                                     </Reveal>
                                 </Grid>
 
-                                <Grid item xs={12} md={8}>
+                                <Grid size={{ xs: 12, md: 8 }}>
                                     <Reveal animation="fadeSlideLeft" delay={0.15}>
                                         <Card sx={{ bgcolor: cardBg, border: `1px solid ${border}`, borderRadius: 3 }}>
                                             <CardContent sx={{ p: { xs: 3, md: 5 } }}>
@@ -1231,10 +1248,10 @@ export default function LandingPage() {
                                                     <Box component="form" onSubmit={handleContact} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                                                         <Typography variant="h6" fontWeight={700}>Send us a Message</Typography>
                                                         <Grid container spacing={2}>
-                                                            <Grid item xs={12} sm={6}>
+                                                            <Grid size={{ xs: 12, sm: 6 }}>
                                                                 <TextField fullWidth label="Your Name" value={contactForm.name} onChange={e => setContactForm(p => ({ ...p, name: e.target.value }))} required />
                                                             </Grid>
-                                                            <Grid item xs={12} sm={6}>
+                                                            <Grid size={{ xs: 12, sm: 6 }}>
                                                                 <TextField fullWidth label="Email Address" type="email" value={contactForm.email} onChange={e => setContactForm(p => ({ ...p, email: e.target.value }))} required />
                                                             </Grid>
                                                         </Grid>
@@ -1267,7 +1284,7 @@ export default function LandingPage() {
                 <Container maxWidth="xl">
                     <Grid container spacing={6} sx={{ mb: 8 }}>
                         {/* Brand col */}
-                        <Grid item xs={12} md={4}>
+                        <Grid size={{ xs: 12, md: 4 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
                                 <Box sx={{
                                     width: 36, height: 36, borderRadius: '10px',
@@ -1314,7 +1331,7 @@ export default function LandingPage() {
                             { title: 'Company', links: ['About Us', 'Blog', 'Careers', 'Press Kit', 'Contact'] },
                             { title: 'Legal', links: ['Privacy Policy', 'Terms of Service', 'Cookie Policy', 'GDPR', 'Security'] },
                         ].map((col, i) => (
-                            <Grid item xs={6} md={2} key={i}>
+                            <Grid size={{ xs: 6, md: 2 }} key={i}>
                                 <Typography variant="overline" sx={{ color: '#64748B', fontWeight: 700, letterSpacing: '0.1em', fontSize: '0.72rem' }}>
                                     {col.title}
                                 </Typography>

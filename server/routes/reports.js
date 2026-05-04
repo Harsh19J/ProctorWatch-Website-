@@ -37,6 +37,24 @@ router.get('/overview', requireAuth, requireAdmin, async (req, res) => {
     }
 });
 
+// ── GET /api/reports/system-info ───────────────────────────────────────────────
+router.get('/system-info', requireAuth, requireAdmin, (req, res) => {
+    const os = require('os');
+    const mem = process.memoryUsage();
+    res.json({
+        platform: os.platform(),
+        arch: os.arch(),
+        cpus: os.cpus().length,
+        cpuModel: os.cpus()[0]?.model || 'Unknown',
+        totalMemoryGB: (os.totalmem() / 1e9).toFixed(1),
+        freeMemoryGB: (os.freemem() / 1e9).toFixed(1),
+        nodeVersion: process.version,
+        uptime: Math.floor(process.uptime()),
+        heapUsedMB: Math.round(mem.heapUsed / 1e6),
+        heapTotalMB: Math.round(mem.heapTotal / 1e6),
+    });
+});
+
 // ── GET /api/reports/performance ──────────────────────────────────────────────
 router.get('/performance', requireAuth, async (req, res) => {
     try {

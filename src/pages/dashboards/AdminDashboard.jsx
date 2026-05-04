@@ -59,10 +59,12 @@ function QuickAction({ icon, label, onClick, color = 'primary', variant = 'outli
     return (
         <Button
             variant={variant} startIcon={icon} color={color} onClick={onClick}
+            fullWidth
             sx={{
                 borderRadius: '10px', fontWeight: 600, fontSize: '0.82rem',
+                height: 42, justifyContent: 'flex-start', px: 2,
                 transition: 'all 200ms ease',
-                '&:hover': { transform: 'translateY(-3px)', boxShadow: '0 6px 18px rgba(0,0,0,0.12)' },
+                '&:hover': { transform: 'translateX(4px)', boxShadow: '0 6px 18px rgba(0,0,0,0.12)' },
             }}
         >
             {label}
@@ -117,33 +119,33 @@ export default function AdminDashboard() {
             </Box>
 
             {/* Stats */}
-            <Grid container spacing={3} sx={{ mb: 4 }}>
+            <Grid container spacing={3} sx={{ mb: 3 }}>
                 {[
                     { title: 'Total Users', value: stats.users, icon: <People />, color: '#D97706', subtitle: 'Students, Teachers, Parents', delay: 0.05 },
                     { title: 'Courses', value: stats.courses, icon: <School />, color: '#FBBF24', delay: 0.11 },
                     { title: 'Total Students', value: stats.students, icon: <School />, color: '#0284C7', delay: 0.17 },
                     { title: 'Active Sessions', value: stats.activeSessions, icon: <Visibility />, color: '#78350F', subtitle: 'Exams in progress', delay: 0.23 },
                 ].map((s, i) => (
-                    <Grid key={i} item xs={12} sm={6} md={3}>
+                    <Grid key={i} size={{ xs: 12, sm: 6, md: 3 }}>
                         <StatCard {...s} />
                     </Grid>
                 ))}
             </Grid>
 
-            <Grid container spacing={3} sx={{ mb: 4 }}>
+            <Grid container spacing={3} sx={{ mb: 3 }}>
                 {/* Quick Actions */}
-                <Grid item xs={12} md={6} sx={{ animation: 'fadeSlideRight 0.5s ease 0.15s both' }}>
+                <Grid size={{ xs: 12, md: 4 }} sx={{ animation: 'fadeSlideRight 0.5s ease 0.15s both' }}>
                     <Card sx={{ height: '100%' }}>
-                        <CardContent sx={{ p: 3 }}>
+                        <CardContent sx={{ p: 3 }}>  
                             <Typography variant="h6" fontWeight={700} sx={{ mb: 2.5 }}>Quick Actions</Typography>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
                                 <QuickAction icon={<PersonAdd />} label="Add User" onClick={() => navigate('/dashboard/users')} />
                                 <QuickAction icon={<Upload />} label="Bulk Upload" onClick={() => navigate('/dashboard/users')} />
                                 <QuickAction icon={<School />} label="Create Course" onClick={() => navigate('/dashboard/courses')} />
                                 <QuickAction icon={<Flag />} label="Review Flags" onClick={() => navigate('/dashboard/flags')} color="warning" />
-                                <QuickAction icon={<Shield />} label="Blacklist" onClick={() => navigate('/dashboard/blacklist')} color="error" />
+                                <QuickAction icon={<Shield />} label="App Blacklist" onClick={() => navigate('/dashboard/blacklist')} color="error" />
                                 <QuickAction
-                                    icon={<Key />} label="Override Code"
+                                    icon={<Key />} label="Generate Override Code"
                                     onClick={() => setCodeGenOpen(true)}
                                     variant="contained"
                                 />
@@ -153,7 +155,7 @@ export default function AdminDashboard() {
                 </Grid>
 
                 {/* Active Sessions */}
-                <Grid item xs={12} md={6} sx={{ animation: 'fadeSlideLeft 0.5s ease 0.2s both' }}>
+                <Grid size={{ xs: 12, md: 8 }} sx={{ animation: 'fadeSlideLeft 0.5s ease 0.2s both' }}>
                     <Card sx={{ height: '100%' }}>
                         <CardContent sx={{ p: 3 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
@@ -166,8 +168,10 @@ export default function AdminDashboard() {
                                 )}
                             </Box>
                             {activeSessions.length === 0 ? (
-                                <Box sx={{ textAlign: 'center', py: 4 }}>
-                                    <Typography color="text.secondary" variant="body2">No active sessions right now</Typography>
+                                <Box sx={{ textAlign: 'center', py: 6 }}>
+                                    <Visibility sx={{ fontSize: 52, color: 'text.secondary', mb: 1.5, animation: 'pulseDot 2s ease-in-out infinite' }} />
+                                    <Typography color="text.secondary" variant="body2" fontWeight={500}>No active sessions right now</Typography>
+                                    <Typography variant="caption" color="text.secondary">Sessions will appear here when exams are in progress</Typography>
                                 </Box>
                             ) : (
                                 activeSessions.slice(0, 4).map((session, idx) => (

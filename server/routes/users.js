@@ -40,6 +40,33 @@ router.get('/me', requireAuth, async (req, res) => {
     }
 });
 
+// ── GET /api/users/my-children ────────────────────────────────────────────────
+// Accessible by any authenticated parent — returns their linked children docs
+router.get('/my-children', requireAuth, async (req, res) => {
+    try {
+        const db = getDB();
+        // Fetch the current user's document to get children[] array
+        const me = await db.collection('users').findOne(
+            { _id: new ObjectId(req.user.id) },
+            { projection: { children: 1 } }
+        );
+        const childIds = (me?.children || []).map(id => {
+            try { return new ObjectId(id); } catch { return null; }
+        }).filter(Boolean);
+
+        if (childIds.length === 0) return res.json([]);
+
+        const children = await db.collection('users')
+            .find({ _id: { $in: childIds } }, { projection: { password_hash: 0 } })
+            .toArray();
+
+        res.json(children.map(u => ({ ...u, id: u._id.toString() })));
+    } catch (err) {
+        console.error('[users/my-children GET]', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
 // ── POST /api/users ────────────────────────────────────────────────────────────
 router.post('/', requireAuth, requireAdmin, async (req, res) => {
     try {

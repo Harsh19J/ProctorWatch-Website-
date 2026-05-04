@@ -1,11 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
     Box, Grid, Card, CardContent, Typography, Chip, Button,
-    LinearProgress, Avatar,
+    LinearProgress, Divider,
 } from '@mui/material';
 import {
-    CalendarMonth, TrendingUp, PlayArrow,
+    CalendarMonth, TrendingUp,
     CheckCircle, Schedule, Flag, Warning, Videocam, Assignment,
+    BarChart, FaceRetouchingNatural, School,
 } from '@mui/icons-material';
 import api from '../../lib/api';
 import useAuthStore from '../../store/authStore';
@@ -18,26 +19,34 @@ import { useAnimatedCounter } from '../../hooks/useAnimatedCounter';
 function AnimStat({ value, label, color, icon, delay = 0 }) {
     const { ref, display } = useAnimatedCounter(value);
     return (
-        <Box
-            ref={ref}
-            sx={{
-                textAlign: 'center', p: 2.5, borderRadius: 3,
-                bgcolor: `${color}0A`,
-                border: `1px solid ${color}20`,
-                transition: 'all 220ms ease',
-                '&:hover': { transform: 'translateY(-4px)', borderColor: `${color}45`, bgcolor: `${color}12` },
-                animation: `scaleIn 0.45s ease ${delay}s both`,
-                cursor: 'default',
-            }}
-        >
-            <Box sx={{ color, mb: 1, display: 'flex', justifyContent: 'center' }}>{icon}</Box>
-            <Typography variant="h4" fontWeight={900} sx={{ color, lineHeight: 1, letterSpacing: '-0.03em' }}>
-                {display}
-            </Typography>
-            <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ mt: 0.5, display: 'block' }}>
-                {label}
-            </Typography>
-        </Box>
+        <Card ref={ref} sx={{
+            height: '100%',
+            animation: `scaleIn 0.45s ease ${delay}s both`,
+            transition: 'all 220ms ease',
+            '&:hover': { transform: 'translateY(-5px)', boxShadow: `0 20px 48px ${color}18` },
+        }}>
+            <CardContent sx={{ p: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <Box>
+                        <Typography variant="body2" color="text.secondary" fontWeight={600}
+                            sx={{ mb: 0.5, textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: '0.72rem' }}>
+                            {label}
+                        </Typography>
+                        <Typography variant="h3" fontWeight={900} sx={{ color, letterSpacing: '-0.04em', lineHeight: 1 }}>
+                            {display}
+                        </Typography>
+                    </Box>
+                    <Box sx={{
+                        p: 1.5, borderRadius: '12px',
+                        bgcolor: `${color}12`, border: `1px solid ${color}25`, color,
+                        transition: 'transform 0.3s',
+                        '&:hover': { transform: 'rotate(12deg) scale(1.12)' },
+                    }}>
+                        {icon}
+                    </Box>
+                </Box>
+            </CardContent>
+        </Card>
     );
 }
 
@@ -109,7 +118,7 @@ export default function StudentDashboard() {
             />
 
             {/* Header */}
-            <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
+            <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
                 <Box sx={{ animation: 'fadeSlideRight 0.45s ease both' }}>
                     <Typography variant="h4" fontWeight={800} sx={{ letterSpacing: '-0.02em', mb: 0.5 }}>
                         Welcome back,{' '}
@@ -128,13 +137,12 @@ export default function StudentDashboard() {
                         color={faceRegistered ? 'success' : 'warning'}
                         variant="outlined"
                         onClick={() => faceRegistered ? setAdminAuthOpen(true) : navigate('/dashboard/face-registration')}
-                        sx={{ cursor: 'pointer', fontWeight: 600 }}
+                        sx={{ cursor: 'pointer', fontWeight: 600, height: 36 }}
                     />
                     <Button
                         variant="outlined" startIcon={<Videocam />}
                         onClick={() => navigate('/dashboard/pw-test')}
-                        size="small"
-                        sx={{ borderRadius: '10px' }}
+                        sx={{ borderRadius: '10px', fontWeight: 600, height: 36 }}
                     >
                         System Check
                     </Button>
@@ -143,32 +151,39 @@ export default function StudentDashboard() {
 
             <DownloadBanner feature="Exam Taking" />
 
-            {/* Stats */}
-            <Grid container spacing={2.5} sx={{ mb: 4 }}>
-                <Grid item xs={4}>
-                    <AnimStat value={pastResults.length} label="Exams Taken" color="#D97706" icon={<Assignment sx={{ fontSize: 22 }} />} delay={0.1} />
+            {/* Stats — full width 4 columns */}
+            <Grid container spacing={2.5} sx={{ mb: 3, mt: 0.5 }}>
+                <Grid size={{ xs: 12, sm: 4 }}>
+                    <AnimStat value={pastResults.length} label="Exams Taken" color="#D97706" icon={<Assignment />} delay={0.05} />
                 </Grid>
-                <Grid item xs={4}>
-                    <AnimStat value={avgScore} label="Avg Score" color="#0284C7" icon={<TrendingUp sx={{ fontSize: 22 }} />} delay={0.18} />
+                <Grid size={{ xs: 12, sm: 4 }}>
+                    <AnimStat value={avgScore} label="Avg Score" color="#0284C7" icon={<TrendingUp />} delay={0.12} />
                 </Grid>
-                <Grid item xs={4}>
-                    <AnimStat value={flagCount} label="Total Flags" color={flagCount > 0 ? '#B45309' : '#0284C7'} icon={<Flag sx={{ fontSize: 22 }} />} delay={0.26} />
+                <Grid size={{ xs: 12, sm: 4 }}>
+                    <AnimStat value={flagCount} label="Total Flags" color={flagCount > 0 ? '#B45309' : '#0284C7'} icon={<Flag />} delay={0.19} />
                 </Grid>
             </Grid>
 
+            {/* Main content grid */}
             <Grid container spacing={3}>
                 {/* Upcoming Exams */}
-                <Grid item xs={12} md={7} sx={{ animation: 'fadeSlideRight 0.5s ease 0.1s both' }}>
-                    <Card>
+                <Grid size={{ xs: 12, md: 7 }} sx={{ animation: 'fadeSlideRight 0.5s ease 0.1s both' }}>
+                    <Card sx={{ height: '100%' }}>
                         <CardContent sx={{ p: 3 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
-                                <Box sx={{ p: 1, borderRadius: '10px', bgcolor: 'rgba(217,119,6,0.1)', color: '#D97706', display: 'flex' }}>
-                                    <CalendarMonth sx={{ fontSize: 20 }} />
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2.5 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                    <Box sx={{ p: 1, borderRadius: '10px', bgcolor: 'rgba(217,119,6,0.1)', color: '#D97706', display: 'flex' }}>
+                                        <CalendarMonth sx={{ fontSize: 20 }} />
+                                    </Box>
+                                    <Typography variant="h6" fontWeight={700}>Upcoming Exams</Typography>
                                 </Box>
-                                <Typography variant="h6" fontWeight={700}>Upcoming Exams</Typography>
+                                {upcomingExams.length > 0 && (
+                                    <Chip label={`${upcomingExams.length} scheduled`} size="small"
+                                        sx={{ bgcolor: 'rgba(217,119,6,0.08)', color: '#D97706', fontWeight: 600, fontSize: '0.72rem' }} />
+                                )}
                             </Box>
                             {upcomingExams.length === 0 ? (
-                                <Box sx={{ textAlign: 'center', py: 5 }}>
+                                <Box sx={{ textAlign: 'center', py: 6 }}>
                                     <Schedule sx={{ fontSize: 52, color: 'text.secondary', mb: 1.5, animation: 'pulseDot 2s ease-in-out infinite' }} />
                                     <Typography color="text.secondary" fontWeight={500}>No upcoming exams</Typography>
                                     <Typography variant="caption" color="text.secondary">Check back later for scheduled exams</Typography>
@@ -218,62 +233,90 @@ export default function StudentDashboard() {
                     </Card>
                 </Grid>
 
-                {/* Recent Results */}
-                <Grid item xs={12} md={5} sx={{ animation: 'fadeSlideLeft 0.5s ease 0.15s both' }}>
-                    <Card sx={{ height: '100%' }}>
-                        <CardContent sx={{ p: 3 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
-                                <Box sx={{ p: 1, borderRadius: '10px', bgcolor: 'rgba(78,205,196,0.1)', color: '#0284C7', display: 'flex' }}>
-                                    <TrendingUp sx={{ fontSize: 20 }} />
+                {/* Right column: Recent Results + Quick Links */}
+                <Grid size={{ xs: 12, md: 5 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, height: '100%' }}>
+                        {/* Recent Results */}
+                        <Card sx={{ animation: 'fadeSlideLeft 0.5s ease 0.15s both', flex: 1 }}>
+                            <CardContent sx={{ p: 3 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
+                                    <Box sx={{ p: 1, borderRadius: '10px', bgcolor: 'rgba(2,132,199,0.1)', color: '#0284C7', display: 'flex' }}>
+                                        <TrendingUp sx={{ fontSize: 20 }} />
+                                    </Box>
+                                    <Typography variant="h6" fontWeight={700}>Recent Results</Typography>
                                 </Box>
-                                <Typography variant="h6" fontWeight={700}>Recent Results</Typography>
-                            </Box>
-                            {pastResults.length === 0 ? (
-                                <Box sx={{ textAlign: 'center', py: 5 }}>
-                                    <Assignment sx={{ fontSize: 52, color: 'text.secondary', mb: 1.5, animation: 'pulseDot 2s ease-in-out infinite' }} />
-                                    <Typography color="text.secondary" fontWeight={500}>No results yet</Typography>
-                                </Box>
-                            ) : (
-                                <Box sx={{ maxHeight: 340, overflowY: 'auto', pr: 0.5 }}>
-                                    {pastResults.map((result, idx) => (
-                                        <Box key={result.id}
-                                            onClick={() => navigate(`/dashboard/results/${result.id}`)}
+                                {pastResults.length === 0 ? (
+                                    <Box sx={{ textAlign: 'center', py: 4 }}>
+                                        <Assignment sx={{ fontSize: 44, color: 'text.secondary', mb: 1.5, animation: 'pulseDot 2s ease-in-out infinite' }} />
+                                        <Typography color="text.secondary" fontWeight={500}>No results yet</Typography>
+                                    </Box>
+                                ) : (
+                                    <Box sx={{ maxHeight: 200, overflowY: 'auto', pr: 0.5 }}>
+                                        {pastResults.map((result, idx) => (
+                                            <Box key={result.id}
+                                                onClick={() => navigate(`/dashboard/results/${result.id}`)}
+                                                sx={{
+                                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                                    p: 1.75, mb: 1, borderRadius: 2,
+                                                    bgcolor: result.status === 'invalidated' ? 'rgba(180,83,9,0.04)' : 'action.hover',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 180ms ease',
+                                                    border: '1px solid transparent',
+                                                    '&:hover': { bgcolor: 'action.selected', borderColor: 'divider', transform: 'translateX(3px)' },
+                                                    animation: `fadeSlideUp 0.38s ease ${idx * 0.06}s both`,
+                                                }}
+                                            >
+                                                <Box>
+                                                    <Typography variant="body2" fontWeight={600}>{result.tests?.title || 'Unknown Test'}</Typography>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {result.ended_at ? new Date(result.ended_at).toLocaleDateString() : '—'}
+                                                    </Typography>
+                                                </Box>
+                                                {result.status === 'invalidated' ? (
+                                                    <Chip label="VOID" size="small" color="error" />
+                                                ) : (
+                                                    <Chip label={`${result.score || 0}/${result.tests?.total_marks || 0}`} size="small" color="primary" variant="outlined" />
+                                                )}
+                                            </Box>
+                                        ))}
+                                    </Box>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        {/* Quick Links */}
+                        <Card sx={{ animation: 'fadeSlideLeft 0.5s ease 0.25s both' }}>
+                            <CardContent sx={{ p: 3 }}>
+                                <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>Quick Actions</Typography>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                    {[
+                                        { icon: <School sx={{ fontSize: 18 }} />, label: 'My Courses', color: '#FBBF24', path: '/dashboard/courses' },
+                                        { icon: <BarChart sx={{ fontSize: 18 }} />, label: 'Performance', color: '#0284C7', path: '/dashboard/performance' },
+                                        { icon: <FaceRetouchingNatural sx={{ fontSize: 18 }} />, label: 'Face Registration', color: '#D97706', path: '/dashboard/face-registration' },
+                                        { icon: <CalendarMonth sx={{ fontSize: 18 }} />, label: 'Calendar', color: '#78350F', path: '/dashboard/calendar' },
+                                    ].map((item) => (
+                                        <Button
+                                            key={item.path}
+                                            fullWidth
+                                            variant="outlined"
+                                            startIcon={item.icon}
+                                            onClick={() => navigate(item.path)}
                                             sx={{
-                                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                                p: 1.75, mb: 1, borderRadius: 2,
-                                                bgcolor: result.status === 'invalidated' ? 'rgba(180,83,9,0.04)' : 'action.hover',
-                                                cursor: 'pointer',
+                                                justifyContent: 'flex-start', borderRadius: '10px',
+                                                fontWeight: 600, fontSize: '0.85rem',
+                                                borderColor: `${item.color}30`, color: item.color,
+                                                bgcolor: `${item.color}05`,
                                                 transition: 'all 180ms ease',
-                                                border: '1px solid transparent',
-                                                '&:hover': { bgcolor: 'action.selected', borderColor: 'divider', transform: 'translateX(3px)' },
-                                                animation: `fadeSlideUp 0.38s ease ${idx * 0.06}s both`,
+                                                '&:hover': { bgcolor: `${item.color}12`, borderColor: `${item.color}60`, transform: 'translateX(4px)' },
                                             }}
                                         >
-                                            <Box>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                    <Typography variant="body2" fontWeight={600}>{result.tests?.title || 'Unknown Test'}</Typography>
-                                                    {result.status === 'invalidated' && (
-                                                        <Chip label="VOID" size="small" color="error" sx={{ height: 16, fontSize: 9, fontWeight: 700 }} />
-                                                    )}
-                                                </Box>
-                                                <Typography variant="caption" color="text.secondary">
-                                                    {result.ended_at ? new Date(result.ended_at).toLocaleDateString() : '—'}
-                                                </Typography>
-                                            </Box>
-                                            {result.status === 'invalidated' ? (
-                                                <Typography variant="body2" fontWeight={700} color="error">VOID</Typography>
-                                            ) : (
-                                                <Chip
-                                                    label={`${result.score || 0}/${result.tests?.total_marks || 0}`}
-                                                    size="small" color="primary" variant="outlined"
-                                                />
-                                            )}
-                                        </Box>
+                                            {item.label}
+                                        </Button>
                                     ))}
                                 </Box>
-                            )}
-                        </CardContent>
-                    </Card>
+                            </CardContent>
+                        </Card>
+                    </Box>
                 </Grid>
             </Grid>
         </Box>

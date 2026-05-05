@@ -14,6 +14,7 @@ import {
     AutoAwesome, BubbleChart, Lock, Security, Notifications,
 } from '@mui/icons-material';
 import { useThemeMode } from '../ThemeContext';
+import useAuthStore from '../store/authStore';
 
 
 import analyticsImg from '../assets/analytics_dash.png';
@@ -379,6 +380,7 @@ const TRUST_BADGES = [
 export default function LandingPage() {
     const navigate = useNavigate();
     const { mode, toggleMode } = useThemeMode();
+    const { user } = useAuthStore();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const [mobileMenu, setMobileMenu] = useState(false);
@@ -562,15 +564,29 @@ export default function LandingPage() {
                             {!isMobile && (
                                 <>
                                     <Button
-                                        variant="outlined" size="small" startIcon={<Login sx={{ fontSize: 16 }} />}
-                                        onClick={() => navigate('/login')}
+                                        variant="outlined" size="small" 
+                                        startIcon={user ? <AdminPanelSettings sx={{ fontSize: 16 }} /> : <Login sx={{ fontSize: 16 }} />}
+                                        onClick={() => {
+                                            if (user) {
+                                                const roleDashboardMap = {
+                                                    admin: '/dashboard/admin',
+                                                    teacher: '/dashboard/teacher',
+                                                    student: '/dashboard/student',
+                                                    parent: '/dashboard/parent',
+                                                    technical: '/dashboard/technical',
+                                                };
+                                                navigate(roleDashboardMap[user.role] || '/dashboard/student');
+                                            } else {
+                                                navigate('/login');
+                                            }
+                                        }}
                                         sx={{
                                             borderColor: 'rgba(217,119,6,0.4)', color: '#D97706',
                                             '&:hover': { borderColor: '#D97706', bgcolor: 'rgba(217,119,6,0.08)', transform: 'translateY(-2px)' },
                                             transition: 'all 0.2s',
                                         }}
                                     >
-                                        Login
+                                        {user ? 'Go to Dashboard' : 'Login'}
                                     </Button>
                                     <Button
                                         variant="contained" size="small" startIcon={<Download sx={{ fontSize: 16 }} />}
@@ -608,9 +624,23 @@ export default function LandingPage() {
                             </Button>
                         ))}
                         <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }}>
-                            <Button fullWidth variant="outlined" onClick={() => navigate('/login')}
+                            <Button fullWidth variant="outlined" 
+                                onClick={() => {
+                                    if (user) {
+                                        const roleDashboardMap = {
+                                            admin: '/dashboard/admin',
+                                            teacher: '/dashboard/teacher',
+                                            student: '/dashboard/student',
+                                            parent: '/dashboard/parent',
+                                            technical: '/dashboard/technical',
+                                        };
+                                        navigate(roleDashboardMap[user.role] || '/dashboard/student');
+                                    } else {
+                                        navigate('/login');
+                                    }
+                                }}
                                 sx={{ borderColor: '#D97706', color: '#D97706', borderRadius: '10px' }}>
-                                Login
+                                {user ? 'Dashboard' : 'Login'}
                             </Button>
                             <Button fullWidth variant="contained" onClick={() => setDownloadModal(true)}
                                 sx={{ background: 'linear-gradient(135deg, #D97706, #FBBF24)', borderRadius: '10px' }}>

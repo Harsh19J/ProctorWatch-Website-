@@ -177,26 +177,39 @@ export default function DashboardLayout({ children }) {
     const drawer = (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
             {/* Brand */}
-            <Box sx={{
-                p: collapsed ? 1.5 : 2.5,
-                display: 'flex', alignItems: 'center', gap: 1.5,
-                justifyContent: collapsed ? 'center' : 'flex-start',
-                minHeight: 66,
-            }}>
-                <Box sx={{
+            <Box 
+                onClick={() => {
+                    const rolePaths = {
+                        admin: '/dashboard/admin',
+                        teacher: '/dashboard/teacher',
+                        student: '/dashboard/student',
+                        parent: '/dashboard/parent',
+                        technical: '/dashboard/technical',
+                    };
+                    navigate(rolePaths[user.role] || '/dashboard/student');
+                }}
+                sx={{
+                    p: collapsed ? 1.5 : 2.5,
+                    display: 'flex', alignItems: 'center', gap: 1.5,
+                    justifyContent: collapsed ? 'center' : 'flex-start',
+                    minHeight: 66,
+                    cursor: 'pointer',
+                    '&:hover .brand-logo': { transform: 'rotate(12deg) scale(1.08)' },
+                    '&:hover .brand-text': { opacity: 0.8 }
+                }}
+            >
+                <Box className="brand-logo" sx={{
                     width: 38, height: 38, borderRadius: '11px', flexShrink: 0,
                     background: 'linear-gradient(135deg, #D97706, #FBBF24)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     boxShadow: '0 4px 14px rgba(217,119,6,0.35)',
                     animation: 'pulseRing 3s ease-in-out infinite',
-                    cursor: 'pointer',
                     transition: 'transform 0.3s',
-                    '&:hover': { transform: 'rotate(12deg) scale(1.08)' },
-                }} onClick={() => navigate('/')}>
+                }}>
                     <Security sx={{ fontSize: 20, color: '#fff' }} />
                 </Box>
                 {!collapsed && (
-                    <Box sx={{ overflow: 'hidden', whiteSpace: 'nowrap', animation: 'fadeSlideRight 0.3s ease both' }}>
+                    <Box className="brand-text" sx={{ overflow: 'hidden', whiteSpace: 'nowrap', animation: 'fadeSlideRight 0.3s ease both', transition: 'opacity 0.2s' }}>
                         <Typography variant="subtitle1" fontWeight={800} sx={{
                             lineHeight: 1.2, letterSpacing: '-0.01em',
                             background: 'linear-gradient(90deg, #D97706, #FBBF24)',

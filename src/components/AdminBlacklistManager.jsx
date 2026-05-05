@@ -25,6 +25,19 @@ const CATEGORY_CONFIG = {
     custom: { label: 'Custom', color: '#FFC107' },
 };
 
+// Normalize documents that might still use the old Supabase schema
+// (fields: type, value, reason, is_active) so the UI never crashes.
+function normalizeApp(raw) {
+    return {
+        process_name:   raw.process_name  || raw.value        || '(unknown)',
+        display_name:   raw.display_name  || raw.process_name || raw.value || '(unknown)',
+        category:       raw.category      || 'custom',
+        is_default:     raw.is_default    ?? true,
+        is_whitelisted: raw.is_whitelisted ?? !raw.is_active  ?? false,
+        id:             raw.id,
+    };
+}
+
 export default function AdminBlacklistManager() {
     const [apps, setApps] = useState([]);
     const [activeTab, setActiveTab] = useState('all');
@@ -40,7 +53,7 @@ export default function AdminBlacklistManager() {
         setLoading(true);
         try {
             const data = await api.get('/api/blacklist');
-            setApps(data || []);
+            setApps((data || []).map(normalizeApp));
         } catch (err) {
             console.error('Failed to load blacklist:', err);
             setSnackbar({ open: true, message: 'Failed to load blacklist from database', severity: 'error' });
@@ -53,6 +66,10 @@ export default function AdminBlacklistManager() {
     // ─── Toggle whitelist ─────────────────────────────────────────────────────
     // The app STAYS in the list — only is_whitelisted flips.
     const toggleWhitelist = async (app) => {
+        if (!app.process_name || app.process_name === '(unknown)') {
+            setSnackbar({ open: true, message: 'Cannot update: entry has no process name. Please delete and re-add it.', severity: 'error' });
+            return;
+        }
         const newVal = !app.is_whitelisted;
         setSaving(app.process_name);
 

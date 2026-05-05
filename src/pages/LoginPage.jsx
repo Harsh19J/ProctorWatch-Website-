@@ -5,7 +5,7 @@ import {
     Alert, IconButton, InputAdornment, CircularProgress, Chip,
     Grid,
 } from '@mui/material';
-import { Visibility, VisibilityOff, Shield, Login, LightMode, DarkMode, Lock, ArrowBack } from '@mui/icons-material';
+import { Visibility, VisibilityOff, Shield, Login, Lock, ArrowBack } from '@mui/icons-material';
 import { useThemeMode } from '../ThemeContext';
 import useAuthStore from '../store/authStore';
 
@@ -26,7 +26,7 @@ const FEATURES = [
 
 export default function LoginPage() {
     const navigate = useNavigate();
-    const { mode, toggleMode } = useThemeMode();
+    const { mode } = useThemeMode();
     const { login, loading, error, clearError } = useAuthStore();
     const [form, setForm] = useState({ username: '', password: '' });
     const [showPw, setShowPw] = useState(false);
@@ -147,15 +147,6 @@ export default function LoginPage() {
                 borderLeft: { md: `1px solid rgba(217,119,6,0.1)` },
             }}>
                 {/* Top controls */}
-                <Box sx={{ position: 'absolute', top: 20, right: 20, display: 'flex', gap: 1 }}>
-                    <IconButton onClick={toggleMode} size="small" sx={{
-                        color: 'text.secondary',
-                        transition: 'transform 0.5s, color 0.2s',
-                        '&:hover': { transform: 'rotate(180deg)', color: '#78350F' },
-                    }}>
-                        {isDark ? <LightMode sx={{ fontSize: 18 }} /> : <DarkMode sx={{ fontSize: 18 }} />}
-                    </IconButton>
-                </Box>
                 <Box sx={{ position: 'absolute', top: 20, left: 20, display: { md: 'none' } }}>
                     <Button component={Link} to="/" size="small" startIcon={<ArrowBack sx={{ fontSize: 16 }} />}
                         sx={{ color: 'text.secondary', fontWeight: 600 }}>

@@ -426,14 +426,19 @@ export default function LandingPage() {
         <Box sx={{ bgcolor: 'transparent', minHeight: '100vh', color: 'text.primary', overflowX: 'hidden' }}>
 
             {/* ═══ DOWNLOAD MODAL ══════════════════════════════════════════════ */}
-            <Modal open={downloadModal} onClose={() => setDownloadModal(false)}>
+            <Modal 
+                open={downloadModal} 
+                onClose={() => setDownloadModal(false)}
+                sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}
+            >
                 <Box sx={{
-                    position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                    position: 'relative',
                     width: { xs: '92vw', sm: 480 }, borderRadius: 4,
                     bgcolor: isDark ? '#0F1117' : '#fff',
                     border: `1px solid rgba(217,119,6,0.25)`,
                     boxShadow: '0 32px 80px rgba(0,0,0,0.5)',
                     p: 5, textAlign: 'center',
+                    outline: 'none',
                     animation: 'scaleIn 0.35s cubic-bezier(0.22,1,0.36,1) both',
                 }}>
                     <Box sx={{
@@ -553,13 +558,7 @@ export default function LandingPage() {
 
                         {/* Actions */}
                         <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <IconButton onClick={toggleMode} size="small" sx={{
-                                color: 'text.secondary',
-                                transition: 'transform 0.5s, color 0.2s',
-                                '&:hover': { transform: 'rotate(180deg)', color: '#78350F' },
-                            }}>
-                                {isDark ? <LightMode sx={{ fontSize: 18 }} /> : <DarkMode sx={{ fontSize: 18 }} />}
-                            </IconButton>
+
                             {!isMobile && (
                                 <>
                                     <Button
@@ -1327,9 +1326,36 @@ export default function LandingPage() {
 
                         {/* Link cols */}
                         {[
-                            { title: 'Product', links: ['Features', 'How It Works', 'Dashboards', 'Pricing', 'Download'] },
-                            { title: 'Company', links: ['About Us', 'Blog', 'Careers', 'Press Kit', 'Contact'] },
-                            { title: 'Legal', links: ['Privacy Policy', 'Terms of Service', 'Cookie Policy', 'GDPR', 'Security'] },
+                            {
+                                title: 'Product',
+                                links: [
+                                    { label: 'Features',      href: '#features' },
+                                    { label: 'How It Works',  href: '#how-it-works' },
+                                    { label: 'Dashboards',    href: '#dashboards' },
+                                    { label: 'Pricing',       href: '#pricing-contact' },
+                                    { label: 'Contact Us',    href: '#pricing-contact' },
+                                ],
+                            },
+                            {
+                                title: 'Platform',
+                                links: [
+                                    { label: 'AI Face Verification',  href: '#features' },
+                                    { label: 'Audio Intelligence',     href: '#features' },
+                                    { label: 'Live Monitoring',        href: '#features' },
+                                    { label: 'Deep Analytics',         href: '#features' },
+                                    { label: 'Download for Windows',   href: null, isDownload: true },
+                                ],
+                            },
+                            {
+                                title: 'Dashboards',
+                                links: [
+                                    { label: 'Student Dashboard',    href: '#dashboards' },
+                                    { label: 'Teacher Dashboard',    href: '#dashboards' },
+                                    { label: 'Admin Dashboard',      href: '#dashboards' },
+                                    { label: 'Parent Dashboard',     href: '#dashboards' },
+                                    { label: 'Technical Dashboard',  href: '#dashboards' },
+                                ],
+                            },
                         ].map((col, i) => (
                             <Grid size={{ xs: 6, md: 2 }} key={i}>
                                 <Typography variant="overline" sx={{ color: '#64748B', fontWeight: 700, letterSpacing: '0.1em', fontSize: '0.72rem' }}>
@@ -1337,12 +1363,20 @@ export default function LandingPage() {
                                 </Typography>
                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 2.5 }}>
                                     {col.links.map(link => (
-                                        <Typography key={link} variant="body2" sx={{
-                                            color: '#475569', cursor: 'pointer',
-                                            transition: 'all 0.18s',
-                                            '&:hover': { color: '#D97706', paddingLeft: '6px' },
-                                        }}>
-                                            {link}
+                                        <Typography
+                                            key={link.label}
+                                            component={link.href ? 'a' : 'span'}
+                                            href={link.href || undefined}
+                                            variant="body2"
+                                            onClick={link.isDownload ? () => setDownloadModal(true) : undefined}
+                                            sx={{
+                                                color: '#475569', cursor: 'pointer',
+                                                textDecoration: 'none',
+                                                transition: 'all 0.18s',
+                                                '&:hover': { color: '#D97706', paddingLeft: '6px' },
+                                            }}
+                                        >
+                                            {link.label}
                                         </Typography>
                                     ))}
                                 </Box>

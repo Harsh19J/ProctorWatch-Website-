@@ -11,12 +11,10 @@ import {
     Flag, CalendarMonth, AccountCircle,
     Storage, Visibility,
     TrendingUp, AdminPanelSettings,
-    Brightness4, Brightness7,
     KeyboardArrowLeft, KeyboardArrowRight,
     Notifications,
 } from '@mui/icons-material';
 import useAuthStore from '../store/authStore';
-import { useThemeMode } from '../ThemeContext';
 
 const DRAWER_WIDTH = 256;
 const COLLAPSED_WIDTH = 68;
@@ -151,7 +149,6 @@ export default function DashboardLayout({ children }) {
     const navigate = useNavigate();
     const location = useLocation();
     const muiTheme = useTheme();
-    const { mode, toggleMode } = useThemeMode();
     const { user, logout } = useAuthStore();
     const [mobileOpen, setMobileOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(false);
@@ -378,15 +375,6 @@ export default function DashboardLayout({ children }) {
                         </Box>
 
                         {/* Right actions */}
-                        <Tooltip title={mode === 'dark' ? 'Light mode' : 'Dark mode'}>
-                            <IconButton onClick={toggleMode} sx={{
-                                color: 'text.secondary',
-                                transition: 'transform 0.5s, color 0.2s',
-                                '&:hover': { transform: 'rotate(180deg)', color: '#78350F' },
-                            }}>
-                                {mode === 'dark' ? <Brightness7 sx={{ fontSize: 20 }} /> : <Brightness4 sx={{ fontSize: 20 }} />}
-                            </IconButton>
-                        </Tooltip>
 
                         <Tooltip title="Notifications (coming soon)">
                             <IconButton sx={{ color: 'text.secondary', '&:hover': { color: 'text.primary' } }}>
@@ -413,9 +401,7 @@ export default function DashboardLayout({ children }) {
                     key={pageKey}
                     sx={{
                         flex: 1, overflow: 'auto', p: 3,
-                        background: mode === 'dark'
-                            ? `radial-gradient(ellipse at 20% 0%, ${roleColor}06 0%, transparent 60%)`
-                            : `radial-gradient(ellipse at 20% 0%, ${roleColor}04 0%, transparent 60%)`,
+                        background: `radial-gradient(ellipse at 20% 0%, ${roleColor}06 0%, transparent 60%)`,
                         animation: 'pageEnter 0.38s cubic-bezier(0.22,1,0.36,1) both',
                     }}
                 >

@@ -23,7 +23,7 @@ async function initDb() {
             'users', 'courses', 'enrollments', 'tests', 'test_questions', 
             'questions', 'exam_sessions', 'answers', 'flags', 
             'override_codes', 'module_overrides', 'audit_logs', 
-            'face_registrations', 'consents'
+            'face_registrations', 'consents', 'blacklist'
         ];
 
         const existingCollections = await db.listCollections().toArray();
@@ -51,6 +51,7 @@ async function initDb() {
         await buildIndex('exam_sessions', { student_id: 1, test_id: 1 });
         await buildIndex('flags', { session_id: 1 });
         await buildIndex('flags', { timestamp: -1 });
+        await buildIndex('blacklist', { process_name: 1 }, { unique: true });
 
         // 3. Create Default Admin User
         const adminUsername = 'admin';

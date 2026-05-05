@@ -8,6 +8,7 @@ import {
 import { Visibility, VisibilityOff, Shield, Login, Lock, ArrowBack } from '@mui/icons-material';
 import { useThemeMode } from '../ThemeContext';
 import useAuthStore from '../store/authStore';
+import { useEffect } from 'react';
 
 const roleDashboardMap = {
     admin: '/dashboard/admin',
@@ -27,10 +28,18 @@ const FEATURES = [
 export default function LoginPage() {
     const navigate = useNavigate();
     const { mode } = useThemeMode();
-    const { login, loading, error, clearError } = useAuthStore();
+    const { login, loading, error, clearError, user } = useAuthStore();
     const [form, setForm] = useState({ username: '', password: '' });
     const [showPw, setShowPw] = useState(false);
     const isDark = mode === 'dark';
+
+    // Redirect if already logged in
+    useEffect(() => {
+        if (user) {
+            const dest = roleDashboardMap[user.role] || '/dashboard/student';
+            navigate(user.first_login ? '/first-login' : dest, { replace: true });
+        }
+    }, [user, navigate]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
